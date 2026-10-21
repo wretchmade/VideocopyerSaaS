@@ -1,0 +1,894 @@
+{
+  "$defs": {
+    "Action": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "minimum": 0,
+          "title": "At",
+          "type": "integer"
+        },
+        "action": {
+          "enum": [
+            "click",
+            "fill",
+            "scroll"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "selector": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selector"
+        },
+        "text": {
+          "default": "",
+          "title": "Text",
+          "type": "string"
+        },
+        "y": {
+          "default": 0,
+          "title": "Y",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "at",
+        "action"
+      ],
+      "title": "Action",
+      "type": "object"
+    },
+    "Asset": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "image",
+            "video",
+            "audio",
+            "font",
+            "transcript"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "license": {
+          "minLength": 1,
+          "title": "License",
+          "type": "string"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "path",
+        "sha256",
+        "license",
+        "source"
+      ],
+      "title": "Asset",
+      "type": "object"
+    },
+    "Audio": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "start": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "source_start": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Source Start",
+          "type": "integer"
+        },
+        "volume": {
+          "default": 1,
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Volume",
+          "type": "number"
+        },
+        "fade_in": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Fade In",
+          "type": "integer"
+        },
+        "fade_out": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Fade Out",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "asset",
+        "end"
+      ],
+      "title": "Audio",
+      "type": "object"
+    },
+    "Capture": {
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "pattern": "^https?://",
+          "title": "Url",
+          "type": "string"
+        },
+        "width": {
+          "default": 1280,
+          "maximum": 4096,
+          "minimum": 16,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "default": 720,
+          "maximum": 4096,
+          "minimum": 16,
+          "title": "Height",
+          "type": "integer"
+        },
+        "frames": {
+          "default": 1,
+          "maximum": 18000,
+          "minimum": 1,
+          "title": "Frames",
+          "type": "integer"
+        },
+        "fps": {
+          "$ref": "#/$defs/Rate"
+        },
+        "wait_selector": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wait Selector"
+        },
+        "timeout_ms": {
+          "default": 30000,
+          "maximum": 120000,
+          "minimum": 100,
+          "title": "Timeout Ms",
+          "type": "integer"
+        },
+        "actions": {
+          "items": {
+            "$ref": "#/$defs/Action"
+          },
+          "maxItems": 500,
+          "title": "Actions",
+          "type": "array"
+        },
+        "allowed_origins": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Origins",
+          "type": "array"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "Capture",
+      "type": "object"
+    },
+    "Key": {
+      "additionalProperties": false,
+      "properties": {
+        "frame": {
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "easing": {
+          "default": "linear",
+          "enum": [
+            "linear",
+            "hold",
+            "smooth"
+          ],
+          "title": "Easing",
+          "type": "string"
+        }
+      },
+      "required": [
+        "frame",
+        "value"
+      ],
+      "title": "Key",
+      "type": "object"
+    },
+    "Layer": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "rect",
+            "image",
+            "video",
+            "text",
+            "component"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Component"
+        },
+        "props": {
+          "additionalProperties": true,
+          "title": "Props",
+          "type": "object"
+        },
+        "asset": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Asset"
+        },
+        "start": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "source_start": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Source Start",
+          "type": "integer"
+        },
+        "track": {
+          "default": 0,
+          "title": "Track",
+          "type": "integer"
+        },
+        "x": {
+          "default": 0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "default": 0,
+          "title": "Y",
+          "type": "number"
+        },
+        "width": {
+          "default": 320,
+          "maximum": 4096,
+          "minimum": 1,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "default": 180,
+          "maximum": 4096,
+          "minimum": 1,
+          "title": "Height",
+          "type": "integer"
+        },
+        "fit": {
+          "default": "contain",
+          "enum": [
+            "contain",
+            "cover",
+            "stretch"
+          ],
+          "title": "Fit",
+          "type": "string"
+        },
+        "crop": {
+          "anyOf": [
+            {
+              "maxItems": 4,
+              "minItems": 4,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Crop"
+        },
+        "opacity": {
+          "default": 1,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Opacity",
+          "type": "number"
+        },
+        "rotation": {
+          "default": 0,
+          "title": "Rotation",
+          "type": "number"
+        },
+        "scale": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "maximum": 8,
+          "title": "Scale",
+          "type": "number"
+        },
+        "color": {
+          "default": "#ffffff",
+          "title": "Color",
+          "type": "string"
+        },
+        "keyframes": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/$defs/Key"
+            },
+            "type": "array"
+          },
+          "title": "Keyframes",
+          "type": "object"
+        },
+        "fade_in": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Fade In",
+          "type": "integer"
+        },
+        "fade_out": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Fade Out",
+          "type": "integer"
+        },
+        "text": {
+          "default": "",
+          "maxLength": 12000,
+          "title": "Text",
+          "type": "string"
+        },
+        "transcript": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transcript"
+        },
+        "text_align": {
+          "default": "left",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "title": "Text Align",
+          "type": "string"
+        },
+        "vertical_align": {
+          "default": "top",
+          "enum": [
+            "top",
+            "middle",
+            "bottom"
+          ],
+          "title": "Vertical Align",
+          "type": "string"
+        },
+        "fonts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fonts",
+          "type": "array"
+        },
+        "font_size": {
+          "default": 32,
+          "maximum": 512,
+          "minimum": 1,
+          "title": "Font Size",
+          "type": "integer"
+        },
+        "line_spacing": {
+          "default": 8,
+          "maximum": 256,
+          "minimum": 0,
+          "title": "Line Spacing",
+          "type": "integer"
+        },
+        "stroke": {
+          "default": 0,
+          "maximum": 32,
+          "minimum": 0,
+          "title": "Stroke",
+          "type": "integer"
+        },
+        "stroke_color": {
+          "default": "#000000",
+          "title": "Stroke Color",
+          "type": "string"
+        },
+        "shadow": {
+          "default": [
+            0,
+            0
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Shadow",
+          "type": "array"
+        },
+        "shadow_color": {
+          "default": "#00000080",
+          "title": "Shadow Color",
+          "type": "string"
+        },
+        "highlight": {
+          "default": "#ffff00",
+          "title": "Highlight",
+          "type": "string"
+        },
+        "words": {
+          "items": {
+            "$ref": "#/$defs/Word"
+          },
+          "maxItems": 2000,
+          "title": "Words",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "end"
+      ],
+      "title": "Layer",
+      "type": "object"
+    },
+    "Rate": {
+      "additionalProperties": false,
+      "properties": {
+        "num": {
+          "default": 30,
+          "maximum": 120000,
+          "minimum": 1,
+          "title": "Num",
+          "type": "integer"
+        },
+        "den": {
+          "default": 1,
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Den",
+          "type": "integer"
+        }
+      },
+      "title": "Rate",
+      "type": "object"
+    },
+    "Task": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "capture",
+            "generation",
+            "media",
+            "speech"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "depends_on": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Depends On",
+          "type": "array"
+        },
+        "capture": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Capture"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider"
+        },
+        "prompt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prompt"
+        },
+        "operation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation"
+        },
+        "inputs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 40,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "input_roles": {
+          "items": {
+            "enum": [
+              "first_frame",
+              "last_frame",
+              "reference_image",
+              "reference_video",
+              "reference_audio"
+            ],
+            "type": "string"
+          },
+          "maxItems": 40,
+          "title": "Input Roles",
+          "type": "array"
+        },
+        "options": {
+          "additionalProperties": true,
+          "title": "Options",
+          "type": "object"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "output_kind": {
+          "default": "video",
+          "enum": [
+            "image",
+            "video",
+            "audio",
+            "transcript"
+          ],
+          "title": "Output Kind",
+          "type": "string"
+        },
+        "budget": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Budget"
+        },
+        "max_cost_micros": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Max Cost Micros",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "Task",
+      "type": "object"
+    },
+    "Transition": {
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "kind": {
+          "default": "crossfade",
+          "enum": [
+            "crossfade",
+            "wipe",
+            "push"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "direction": {
+          "default": "left",
+          "enum": [
+            "left",
+            "right",
+            "up",
+            "down"
+          ],
+          "title": "Direction",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target",
+        "start",
+        "end"
+      ],
+      "title": "Transition",
+      "type": "object"
+    },
+    "Word": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end"
+      ],
+      "title": "Word",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "d-project",
+      "default": "d-project",
+      "title": "Format",
+      "type": "string"
+    },
+    "version": {
+      "const": 1,
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "width": {
+      "default": 640,
+      "maximum": 4096,
+      "minimum": 16,
+      "title": "Width",
+      "type": "integer"
+    },
+    "height": {
+      "default": 360,
+      "maximum": 4096,
+      "minimum": 16,
+      "title": "Height",
+      "type": "integer"
+    },
+    "frames": {
+      "default": 90,
+      "maximum": 108000,
+      "minimum": 1,
+      "title": "Frames",
+      "type": "integer"
+    },
+    "fps": {
+      "$ref": "#/$defs/Rate"
+    },
+    "background": {
+      "default": "#000000",
+      "title": "Background",
+      "type": "string"
+    },
+    "output": {
+      "default": "mp4",
+      "enum": [
+        "mp4",
+        "mov-alpha"
+      ],
+      "title": "Output",
+      "type": "string"
+    },
+    "assets": {
+      "items": {
+        "$ref": "#/$defs/Asset"
+      },
+      "maxItems": 500,
+      "title": "Assets",
+      "type": "array"
+    },
+    "layers": {
+      "items": {
+        "$ref": "#/$defs/Layer"
+      },
+      "maxItems": 500,
+      "title": "Layers",
+      "type": "array"
+    },
+    "audio": {
+      "items": {
+        "$ref": "#/$defs/Audio"
+      },
+      "maxItems": 100,
+      "title": "Audio",
+      "type": "array"
+    },
+    "tasks": {
+      "items": {
+        "$ref": "#/$defs/Task"
+      },
+      "maxItems": 100,
+      "title": "Tasks",
+      "type": "array"
+    },
+    "transitions": {
+      "items": {
+        "$ref": "#/$defs/Transition"
+      },
+      "maxItems": 100,
+      "title": "Transitions",
+      "type": "array"
+    }
+  },
+  "title": "Project",
+  "type": "object"
+}

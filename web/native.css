@@ -1,0 +1,10 @@
+.native-canvas{height:100%;display:flex;flex-direction:column;background:#f4f6f2;min-height:0}
+.native-toolbar,.native-footer{display:flex;align-items:center;gap:12px;padding:16px;border-bottom:1px solid #d9e2da;background:#fffdf8}
+.native-toolbar>div{flex:1;display:flex;flex-direction:column;gap:5px}.native-toolbar small{color:#69766d}
+.native-toolbar button,.native-footer button{display:inline-flex;gap:6px;align-items:center;border:1px solid #ccd9d2;background:white;color:#225c50;border-radius:8px;padding:8px 10px;cursor:pointer}
+.native-notice{padding:12px 18px;font-size:13px;line-height:1.7;background:#eaf3ed;color:#245b49;border-bottom:1px solid #d1e4d7}
+.native-viewport{flex:1;overflow:auto;min-height:250px;background-image:radial-gradient(#a4b9ab55 1px,transparent 1px);background-size:20px 20px}
+.native-viewport g[role=button]{cursor:pointer}.native-viewport g[role=button]:focus{outline:none}.native-viewport g[role=button]:focus rect{stroke:#087a73;stroke-width:3px}
+.native-footer{border-top:1px solid #d9e2da;font-size:12px;justify-content:space-between}.native-footer>div{display:flex;gap:10px;align-items:center}
+.native-deliveries{max-height:240px;overflow:auto;display:flex;gap:16px;padding:12px}.native-deliveries>div{display:grid;gap:6px;min-width:240px;font-size:12px}.native-deliveries video{width:240px;max-height:150px;border-radius:8px}.native-deliveries a{display:flex;align-items:center;gap:6px;color:#176e5c}
+.pending-quote{padding:14px;margin:12px 0;border:1px solid #bad6c7;border-radius:12px;background:#f1f8f2;line-height:1.7}.pending-quote button{margin-top:8px;padding:8px 14px;border-radius:8px;background:#226851;color:white;border:0;cursor:pointer}

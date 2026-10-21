@@ -1,0 +1,98 @@
+{
+  "format": "marketing-creative-template",
+  "schema_version": "0.2.0-proposal",
+  "template_id": "product-reveal-light",
+  "revision": 1,
+  "status": "illustrative_draft",
+  "origin": {"kind": "authored_example", "source_ad_ids": []},
+  "catalog": {
+    "title": "暗场揭晓：让产品成为焦点",
+    "category": "product_motion",
+    "summary": "从产品局部和光线反差开场，揭晓完整产品，再以主视觉收尾。",
+    "preview_asset_id": null,
+    "suitable_for": ["单件实物产品，正面可辨识，适合轻微镜头运动"],
+    "input_badge": "1张清晰产品图",
+    "default_duration_ms": 10000,
+    "aspect_ratio": "9:16"
+  },
+  "experience": {
+    "mode": "template_first",
+    "primary_action": "recreate",
+    "required_user_fields": ["product_image"],
+    "optional_user_fields": ["edit_instruction", "hook_id", "setting_id", "cta"],
+    "show_plan_by_default": false,
+    "show_quote_before_submit": true,
+    "asset_input_routes": ["upload", "existing_product"],
+    "future_input_routes": ["product_url_with_extraction_review"],
+    "note": "这是目标体验；当前尚无执行器或一键生成能力。"
+  },
+  "input_contract": {
+    "product_image": {"kind": "image", "required": true, "role": "product_identity"},
+    "edit_instruction": {"kind": "text", "required": false, "default": ""},
+    "cta": {"kind": "text", "required": false, "default": ""},
+    "conditional_inputs": [
+      {"id": "original_logo", "required_when": "user_requests_separate_brand_overlay", "reason": "使用原稿合成，不让模型重画"},
+      {"id": "additional_product_view", "required_when": "requested_camera_reveals_unverified_surface", "alternative": "保留默认正面轻运动"}
+    ]
+  },
+  "components": {
+    "hook": {
+      "default_id": "detail_reveal@1",
+      "allowed_ids": ["detail_reveal@1", "light_reveal@1"],
+      "preserve_default_label": "保留原钩子"
+    },
+    "setting": {"default_id": "dark_studio@1", "allowed_ids": ["dark_studio@1", "neutral_studio@1"]},
+    "avatar": {"enabled": false}
+  },
+  "component_definitions": [
+    {"id": "detail_reveal@1", "slot": "hook", "rule": "前两秒显示真实产品局部，随后揭晓整体", "duration_ms": 2000},
+    {"id": "light_reveal@1", "slot": "hook", "rule": "前两秒通过照明变化显露同一产品轮廓，随后揭晓整体", "duration_ms": 2000},
+    {"id": "dark_studio@1", "slot": "setting", "rule": "深色背景，主体边缘清晰，不改变产品固有配色"},
+    {"id": "neutral_studio@1", "slot": "setting", "rule": "中性背景，用亮度对比保持开场揭晓效果，不改变产品固有配色"}
+  ],
+  "creative_contract": {
+    "invariants": ["product_identity", "reveal_sequence", "clear_hero_end"],
+    "beats": [
+      {"id": "hook", "range_ms": [0, 2000], "purpose": "制造视觉好奇", "rule_source": "selected_hook"},
+      {"id": "reveal", "range_ms": [2000, 7000], "purpose": "揭晓同一产品整体", "rule_source": "reveal_sequence"},
+      {"id": "hero", "range_ms": [7000, 10000], "purpose": "清晰记住产品", "rule_source": "clear_hero_end"}
+    ],
+    "claim_policy": "不推导或生成产品功效证明，用户新增功效要求时另走证据模板"
+  },
+  "identity_contract": {
+    "source": "bound_product_image",
+    "derive": ["product_description", "shot_anchors"],
+    "preserve": ["shape", "color", "parts", "label_layout", "mark_spelling"],
+    "send_image_with_prompt": true,
+    "screen_logo_method": "composite_original_if_requested",
+    "physical_mark_policy": "preserve_surface_attachment_and_review",
+    "never_substitute_screen_overlay_for_physical_mark": true
+  },
+  "prompt_recipe": {
+    "identity": "保持绑定产品图中的同一物体：{{identity.description}}。",
+    "creative": "按{{selected_hook.rule}}开场，随后揭晓整体，以清晰主视觉结束。",
+    "setting": "{{selected_setting.rule}}",
+    "motion": "使用已校验镜头锚点与轻微镜头运动，不虚构未提供的背面结构。",
+    "references": [
+      {"binding": "shot.anchor_asset_id", "role": "first_frame"},
+      {"binding": "instance.product_asset_id", "role": "reference_image"}
+    ]
+  },
+  "execution_contract": {
+    "status": "proposed",
+    "target": "d-project",
+    "required_steps": ["bind_assets", "resolve_components", "derive_identity", "plan_beats", "validate_anchors", "quote", "generate_or_compose", "check_identity", "render", "check_final"],
+    "plan_trace_fields": ["template_revision", "component_versions", "beat_id", "requirement_refs", "asset_hashes", "input_roles"],
+    "capability_probe_required": true,
+    "unsupported_reference_policy": "offer_supported_still_composition_with_updated_preview_and_quote",
+    "human_review": "on_missing_critical_input_or_failed_check_or_pro_mode",
+    "automatic_checks_must_be_validated_before_one_click_release": true,
+    "retry_budget": "included_in_user_approved_job_quote",
+    "workflow_id": null
+  },
+  "publication": {
+    "ready": false,
+    "required": ["authorized_actual_preview", "compatible_product_trials", "execution_receipts", "documented_limitations"],
+    "validation_receipts": []
+  }
+}

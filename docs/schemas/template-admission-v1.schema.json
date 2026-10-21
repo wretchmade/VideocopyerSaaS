@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VideoCopyer Template Candidate Admission v1 proposal",
+  "description": "候选准入请求。结构校验不等于资源真实性、可执行性或发布审核通过；这些由服务端另外验证。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "command_id", "producer_item_id", "expected_revision", "candidate"],
+  "properties": {
+    "contract_version": {"const": "1.0.0-proposal"},
+    "command_id": {"$ref": "#/$defs/id"},
+    "producer_item_id": {"$ref": "#/$defs/id"},
+    "expected_revision": {"type": "integer", "minimum": 0},
+    "candidate": {"$ref": "#/$defs/candidate"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},
+    "symbol": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"},
+    "text": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "label": {"type": "string", "minLength": 1, "maxLength": 160},
+    "ids": {"type": "array", "items": {"$ref": "#/$defs/id"}, "uniqueItems": true, "maxItems": 100},
+    "variable": {"type": "string", "pattern": "^(identity|params|segment|output|components)\\.[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)*$", "maxLength": 160},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "resource_ref": {
+      "type": "object", "additionalProperties": false,
+      "required": ["resource_id", "sha256"],
+      "properties": {"resource_id": {"$ref": "#/$defs/id"}, "sha256": {"$ref": "#/$defs/sha256"}}
+    },
+    "observation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "range_ms", "kind", "description"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "range_ms": {"type": "array", "prefixItems": [{"type": "integer", "minimum": 0}, {"type": "integer", "minimum": 1}], "items": false, "minItems": 2, "maxItems": 2},
+        "kind": {"enum": ["observation", "inference"]},
+        "description": {"$ref": "#/$defs/text"}
+      }
+    },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "platform", "canonical_url", "media_ref", "analysis_ref", "observations"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "platform": {"$ref": "#/$defs/label"},
+        "canonical_url": {"type": ["string", "null"], "pattern": "^https?://", "maxLength": 2048},
+        "media_ref": {"$ref": "#/$defs/resource_ref"},
+        "analysis_ref": {"$ref": "#/$defs/resource_ref"},
+        "observations": {"type": "array", "items": {"$ref": "#/$defs/observation"}, "minItems": 1, "maxItems": 100}
+      }
+    },
+    "package_asset": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "resource_ref", "kind", "use", "rights"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "resource_ref": {"$ref": "#/$defs/resource_ref"},
+        "kind": {"enum": ["image", "video", "audio", "font"]},
+        "use": {"enum": ["reference_only", "preview", "shared_production"]},
+        "rights": {
+          "type": "object", "additionalProperties": false, "required": ["status", "evidence_ref"],
+          "properties": {
+            "status": {"enum": ["unknown", "reference_only", "owned", "licensed"]},
+            "evidence_ref": {"anyOf": [{"$ref": "#/$defs/resource_ref"}, {"type": "null"}]}
+          }
+        }
+      }
+    },
+    "preview": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "asset_id", "note"],
+      "properties": {
+        "kind": {"enum": ["none", "source_reference", "system_sample"]},
+        "asset_id": {"anyOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+        "note": {"$ref": "#/$defs/text"}
+      },
+      "allOf": [
+        {"if": {"properties": {"kind": {"const": "none"}}}, "then": {"properties": {"asset_id": {"type": "null"}}}, "else": {"properties": {"asset_id": {"$ref": "#/$defs/id"}}}}
+      ]
+    },
+    "input_slot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "label", "media_kind", "identity_kind", "min_items", "max_items", "description"],
+      "properties": {
+        "id": {"$ref": "#/$defs/symbol"},
+        "label": {"$ref": "#/$defs/label"},
+        "media_kind": {"enum": ["image", "video", "audio"]},
+        "identity_kind": {"enum": ["product", "person", "scene", "logo", "evidence", "other"]},
+        "min_items": {"type": "integer", "minimum": 0, "maximum": 16},
+        "max_items": {"type": "integer", "minimum": 1, "maximum": 16},
+        "description": {"$ref": "#/$defs/text"}
+      }
+    },
+    "parameter": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["id", "label", "type", "default", "values"],
+          "properties": {
+            "id": {"$ref": "#/$defs/symbol"}, "label": {"$ref": "#/$defs/label"}, "type": {"const": "enum"},
+            "default": {"$ref": "#/$defs/label"},
+            "values": {"type": "array", "items": {"$ref": "#/$defs/label"}, "minItems": 1, "maxItems": 30, "uniqueItems": true}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["id", "label", "type", "default", "max_length"],
+          "properties": {
+            "id": {"$ref": "#/$defs/symbol"}, "label": {"$ref": "#/$defs/label"}, "type": {"const": "text"},
+            "default": {"type": "string", "maxLength": 1000}, "max_length": {"type": "integer", "minimum": 1, "maximum": 1000}
+          }
+        }
+      ]
+    },
+    "fps": {
+      "type": "object", "additionalProperties": false, "required": ["num", "den"],
+      "properties": {"num": {"type": "integer", "minimum": 1, "maximum": 120000}, "den": {"type": "integer", "minimum": 1, "maximum": 10000}}
+    },
+    "output_policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["fps", "aspect_ratios", "min_seconds", "max_seconds", "default_seconds", "allocation"],
+      "properties": {
+        "fps": {"$ref": "#/$defs/fps"},
+        "aspect_ratios": {"type": "array", "items": {"enum": ["9:16", "16:9", "1:1"]}, "uniqueItems": true, "minItems": 1},
+        "min_seconds": {"type": "integer", "minimum": 1, "maximum": 600},
+        "max_seconds": {"type": "integer", "minimum": 1, "maximum": 600},
+        "default_seconds": {"type": "integer", "minimum": 1, "maximum": 600},
+        "allocation": {"const": "bounded_weighted_frames_v1"}
+      }
+    },
+    "segment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "label", "purpose", "min_count", "max_count", "min_seconds", "max_seconds", "weight", "expansion_priority", "requirement_ids"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "label": {"$ref": "#/$defs/label"}, "purpose": {"$ref": "#/$defs/text"},
+        "min_count": {"type": "integer", "minimum": 0, "maximum": 20},
+        "max_count": {"type": "integer", "minimum": 1, "maximum": 20},
+        "min_seconds": {"type": "integer", "minimum": 1, "maximum": 60},
+        "max_seconds": {"type": "integer", "minimum": 1, "maximum": 60},
+        "weight": {"type": "integer", "minimum": 1, "maximum": 100},
+        "expansion_priority": {"type": "integer", "minimum": 0, "maximum": 100},
+        "requirement_ids": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "prompt_sections": {
+      "type": "object", "additionalProperties": false,
+      "required": ["identity", "creative", "environment", "motion", "constraints"],
+      "properties": {
+        "identity": {"$ref": "#/$defs/text"}, "creative": {"$ref": "#/$defs/text"},
+        "environment": {"$ref": "#/$defs/text"}, "motion": {"$ref": "#/$defs/text"}, "constraints": {"$ref": "#/$defs/text"}
+      }
+    },
+    "prompt_recipe": {
+      "type": "object", "additionalProperties": false, "required": ["id", "variables", "sections"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "variables": {"type": "array", "items": {"$ref": "#/$defs/variable"}, "uniqueItems": true, "maxItems": 50},
+        "sections": {"$ref": "#/$defs/prompt_sections"}
+      }
+    },
+    "component": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "label", "slot", "target_segment_ids", "required_slot_ids", "replace_requirement_ids", "requirement_ids", "recipe_overrides", "incompatible_component_ids"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "label": {"$ref": "#/$defs/label"},
+        "slot": {"enum": ["hook", "setting", "avatar"]},
+        "target_segment_ids": {"$ref": "#/$defs/ids"},
+        "required_slot_ids": {"$ref": "#/$defs/ids"},
+        "replace_requirement_ids": {"$ref": "#/$defs/ids"},
+        "requirement_ids": {"$ref": "#/$defs/ids"},
+        "incompatible_component_ids": {"$ref": "#/$defs/ids"},
+        "recipe_overrides": {
+          "type": "array", "maxItems": 20,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["recipe_id", "section", "text"],
+            "properties": {
+              "recipe_id": {"$ref": "#/$defs/id"},
+              "section": {"enum": ["creative", "environment", "motion"]},
+              "text": {"$ref": "#/$defs/text"}
+            }
+          }
+        }
+      }
+    },
+    "component_slot": {
+      "type": "object", "additionalProperties": false, "required": ["id", "default_component_id", "allowed_component_ids"],
+      "properties": {
+        "id": {"enum": ["hook", "setting", "avatar"]},
+        "default_component_id": {"$ref": "#/$defs/id"},
+        "allowed_component_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}, "uniqueItems": true, "minItems": 1, "maxItems": 30}
+      }
+    },
+    "input_binding": {
+      "type": "object", "additionalProperties": false, "required": ["slot_id", "role", "selection"],
+      "properties": {
+        "slot_id": {"$ref": "#/$defs/id"},
+        "role": {"enum": ["first_frame", "last_frame", "reference_image", "reference_video", "reference_audio", "overlay", "source_media"]},
+        "selection": {"enum": ["first", "remaining", "all"]}
+      }
+    },
+    "dependency": {
+      "type": "object", "additionalProperties": false, "required": ["node_id", "binding"],
+      "properties": {
+        "node_id": {"$ref": "#/$defs/id"},
+        "binding": {"enum": ["same_instance", "all_instances"]}
+      }
+    },
+    "output_input": {
+      "type": "object", "additionalProperties": false, "required": ["node_id", "binding", "role"],
+      "properties": {
+        "node_id": {"$ref": "#/$defs/id"},
+        "binding": {"enum": ["same_instance", "all_instances"]},
+        "role": {"enum": ["first_frame", "last_frame", "reference_image", "reference_video", "reference_audio", "source_media", "check_subject"]}
+      }
+    },
+    "node": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "executor", "scope", "segment_id", "depends_on", "capability_id", "slot_inputs", "output_inputs", "parameter_inputs", "prompt_recipe_id", "check_id", "requirement_ids"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "kind": {"enum": ["generate", "media", "compose", "check", "render"]},
+        "executor": {"enum": ["d", "orchestrator"]},
+        "scope": {"enum": ["once", "per_segment"]},
+        "segment_id": {"anyOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+        "depends_on": {"type": "array", "items": {"$ref": "#/$defs/dependency"}, "maxItems": 100},
+        "capability_id": {"$ref": "#/$defs/id"},
+        "slot_inputs": {"type": "array", "items": {"$ref": "#/$defs/input_binding"}, "maxItems": 32},
+        "output_inputs": {"type": "array", "items": {"$ref": "#/$defs/output_input"}, "maxItems": 100},
+        "parameter_inputs": {
+          "type": "array", "maxItems": 30,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["name", "variable"],
+            "properties": {"name": {"$ref": "#/$defs/id"}, "variable": {"$ref": "#/$defs/variable"}}
+          }
+        },
+        "prompt_recipe_id": {"anyOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+        "check_id": {"anyOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+        "requirement_ids": {"$ref": "#/$defs/ids"}
+      },
+      "allOf": [
+        {"if": {"properties": {"scope": {"const": "per_segment"}}}, "then": {"properties": {"segment_id": {"$ref": "#/$defs/id"}}}, "else": {"properties": {"segment_id": {"type": "null"}}}},
+        {"if": {"properties": {"kind": {"const": "generate"}}}, "then": {"properties": {"prompt_recipe_id": {"$ref": "#/$defs/id"}, "executor": {"const": "d"}}}},
+        {"if": {"properties": {"kind": {"const": "check"}}}, "then": {"properties": {"check_id": {"$ref": "#/$defs/id"}, "executor": {"const": "orchestrator"}}}, "else": {"properties": {"check_id": {"type": "null"}}}}
+      ]
+    },
+    "requirement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "description", "target_segment_ids", "check_id", "observation_ids"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "kind": {"enum": ["structural", "visual"]},
+        "description": {"$ref": "#/$defs/text"},
+        "target_segment_ids": {"$ref": "#/$defs/ids"},
+        "check_id": {"$ref": "#/$defs/id"},
+        "observation_ids": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "method_id", "on_failure", "max_repair_attempts"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "kind": {"enum": ["structural", "manual_visual", "model_visual"]},
+        "method_id": {"$ref": "#/$defs/id"},
+        "on_failure": {"enum": ["block", "request_input", "repair_affected"]},
+        "max_repair_attempts": {"type": "integer", "minimum": 0, "maximum": 3}
+      }
+    },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["catalog", "sources", "assets", "preview", "input_slots", "parameters", "component_slots", "components", "output_policy", "segments", "prompt_recipes", "nodes", "requirements", "checks", "adaptation_policy"],
+      "properties": {
+        "catalog": {
+          "type": "object", "additionalProperties": false, "required": ["title", "summary", "category", "tags"],
+          "properties": {
+            "title": {"$ref": "#/$defs/label"}, "summary": {"$ref": "#/$defs/text"},
+            "category": {"enum": ["product_motion", "product_shot", "ugc", "software_ad", "reference_video", "other"]},
+            "tags": {"type": "array", "items": {"$ref": "#/$defs/label"}, "uniqueItems": true, "maxItems": 12}
+          }
+        },
+        "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}, "minItems": 1, "maxItems": 20},
+        "assets": {"type": "array", "items": {"$ref": "#/$defs/package_asset"}, "maxItems": 100},
+        "preview": {"$ref": "#/$defs/preview"},
+        "input_slots": {"type": "array", "items": {"$ref": "#/$defs/input_slot"}, "minItems": 1, "maxItems": 30},
+        "parameters": {"type": "array", "items": {"$ref": "#/$defs/parameter"}, "maxItems": 30},
+        "component_slots": {"type": "array", "items": {"$ref": "#/$defs/component_slot"}, "maxItems": 3},
+        "components": {"type": "array", "items": {"$ref": "#/$defs/component"}, "maxItems": 90},
+        "output_policy": {"$ref": "#/$defs/output_policy"},
+        "segments": {"type": "array", "items": {"$ref": "#/$defs/segment"}, "minItems": 1, "maxItems": 30},
+        "prompt_recipes": {"type": "array", "items": {"$ref": "#/$defs/prompt_recipe"}, "maxItems": 50},
+        "nodes": {"type": "array", "items": {"$ref": "#/$defs/node"}, "minItems": 1, "maxItems": 100},
+        "requirements": {"type": "array", "items": {"$ref": "#/$defs/requirement"}, "minItems": 1, "maxItems": 100},
+        "checks": {"type": "array", "items": {"$ref": "#/$defs/check"}, "minItems": 1, "maxItems": 100},
+        "adaptation_policy": {
+          "type": "object", "additionalProperties": false,
+          "required": ["allow_free_text", "editable_parameter_ids", "max_plan_repairs", "outside_scope"],
+          "properties": {
+            "allow_free_text": {"type": "boolean"},
+            "editable_parameter_ids": {"$ref": "#/$defs/ids"},
+            "max_plan_repairs": {"type": "integer", "minimum": 0, "maximum": 3},
+            "outside_scope": {"const": "explicit_variant"}
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "data_dir": ".local/data",
+  "database_url": "",
+  "port": 8765,
+  "planning": {
+    "base_url": "https://api.openai.com/v1",
+    "model": "",
+    "key_env": "VIDEOCOPYER_PLANNING_KEY",
+    "input_cny_per_million": null,
+    "output_cny_per_million": null,
+    "max_output_tokens": 4096
+  },
+  "media_profile": "",
+  "cos_env_file": "",
+  "test_budget_cny": 100,
+  "templates_enabled": true,
+  "template_routes": {},
+  "font": "C:/Windows/Fonts/simhei.ttf",
+  "ffmpeg": "",
+  "ffprobe": ""
+}

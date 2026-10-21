@@ -1,0 +1,187 @@
+{
+  "contract_version": "1.0.0-proposal",
+  "command_id": "demo-admission-001",
+  "producer_item_id": "demo-product-reveal",
+  "expected_revision": 0,
+  "candidate": {
+    "catalog": {
+      "title": "产品揭晓与细节展示",
+      "summary": "协议演示数据，不是已运行模板。局部开场、可展开的产品展示、完整产品收尾。",
+      "category": "product_motion",
+      "tags": ["产品", "可变片长", "协议示例"]
+    },
+    "sources": [
+      {
+        "id": "demo_source",
+        "platform": "authored_fixture",
+        "canonical_url": null,
+        "media_ref": {
+          "resource_id": "demo-source-not-registered",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "analysis_ref": {
+          "resource_id": "demo-analysis-not-registered",
+          "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "observations": [
+          {
+            "id": "obs_structure",
+            "range_ms": [0, 10000],
+            "kind": "inference",
+            "description": "虚构的创作结构示例，没有真实视频观察；仅用于检验协议字段与引用。"
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "preview": {"kind": "none", "asset_id": null, "note": "尚无实际样片。演示资源未登记，真实准入必须返回 ASSET_NOT_FOUND。"},
+    "input_slots": [
+      {
+        "id": "product", "label": "产品图片", "media_kind": "image", "identity_kind": "product",
+        "min_items": 1, "max_items": 3,
+        "description": "第一张为主体参考，后续图片为同一产品的细节。具体参考组合须通过所用模型能力检查。"
+      }
+    ],
+    "parameters": [
+      {"id": "end_copy", "label": "片尾文案", "type": "text", "default": "", "max_length": 60}
+    ],
+    "component_slots": [
+      {"id": "setting", "default_component_id": "dark_studio", "allowed_component_ids": ["dark_studio", "white_studio"]}
+    ],
+    "components": [
+      {
+        "id": "dark_studio", "label": "深色摄影棚", "slot": "setting",
+        "target_segment_ids": ["hook", "feature", "hero"], "required_slot_ids": ["product"],
+        "replace_requirement_ids": [], "requirement_ids": [], "incompatible_component_ids": [],
+        "recipe_overrides": [
+          {"recipe_id": "product_motion", "section": "environment", "text": "深色简洁摄影棚，保证产品轮廓清楚。"}
+        ]
+      },
+      {
+        "id": "white_studio", "label": "白色摄影棚", "slot": "setting",
+        "target_segment_ids": ["hook", "feature", "hero"], "required_slot_ids": ["product"],
+        "replace_requirement_ids": [], "requirement_ids": [], "incompatible_component_ids": [],
+        "recipe_overrides": [
+          {"recipe_id": "product_motion", "section": "environment", "text": "白色简洁摄影棚，不改变产品固有配色，不添加装饰道具。"}
+        ]
+      }
+    ],
+    "output_policy": {
+      "fps": {"num": 24, "den": 1}, "aspect_ratios": ["9:16", "16:9"],
+      "min_seconds": 7, "max_seconds": 24, "default_seconds": 10,
+      "allocation": "bounded_weighted_frames_v1"
+    },
+    "segments": [
+      {
+        "id": "hook", "label": "局部开场", "purpose": "用真实产品局部制造视觉好奇",
+        "min_count": 1, "max_count": 1, "min_seconds": 2, "max_seconds": 3,
+        "weight": 1, "expansion_priority": 0, "requirement_ids": ["sequence", "identity"]
+      },
+      {
+        "id": "feature", "label": "产品展示", "purpose": "展示不同且有参考依据的产品细节",
+        "min_count": 1, "max_count": 3, "min_seconds": 3, "max_seconds": 6,
+        "weight": 3, "expansion_priority": 1, "requirement_ids": ["sequence", "identity"]
+      },
+      {
+        "id": "hero", "label": "完整收尾", "purpose": "完整清楚地呈现同一产品",
+        "min_count": 1, "max_count": 1, "min_seconds": 2, "max_seconds": 3,
+        "weight": 1, "expansion_priority": 0, "requirement_ids": ["sequence", "identity", "clear_end"]
+      }
+    ],
+    "prompt_recipes": [
+      {
+        "id": "product_motion",
+        "variables": ["identity.product", "segment.purpose"],
+        "sections": {
+          "identity": "使用实际传入图片中的同一产品：{{identity.product}}。",
+          "creative": "本段任务：{{segment.purpose}}。",
+          "environment": "深色简洁摄影棚，保证产品轮廓清楚。",
+          "motion": "仅使用参考资料支持的视角与轻微运动。",
+          "constraints": "保持产品形状、配色、部件和标签布局；不虚构背面结构，不生成未经证实的功效演示。"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "hook_video", "kind": "generate", "executor": "d", "scope": "per_segment", "segment_id": "hook",
+        "depends_on": [], "capability_id": "reference_guided_video_v1",
+        "slot_inputs": [
+          {"slot_id": "product", "role": "first_frame", "selection": "first"},
+          {"slot_id": "product", "role": "reference_image", "selection": "remaining"}
+        ],
+        "output_inputs": [], "parameter_inputs": [], "prompt_recipe_id": "product_motion", "check_id": null,
+        "requirement_ids": ["identity"]
+      },
+      {
+        "id": "feature_video", "kind": "generate", "executor": "d", "scope": "per_segment", "segment_id": "feature",
+        "depends_on": [], "capability_id": "reference_guided_video_v1",
+        "slot_inputs": [
+          {"slot_id": "product", "role": "first_frame", "selection": "first"},
+          {"slot_id": "product", "role": "reference_image", "selection": "remaining"}
+        ],
+        "output_inputs": [], "parameter_inputs": [], "prompt_recipe_id": "product_motion", "check_id": null,
+        "requirement_ids": ["identity"]
+      },
+      {
+        "id": "hero_video", "kind": "generate", "executor": "d", "scope": "per_segment", "segment_id": "hero",
+        "depends_on": [], "capability_id": "reference_guided_video_v1",
+        "slot_inputs": [
+          {"slot_id": "product", "role": "first_frame", "selection": "first"},
+          {"slot_id": "product", "role": "reference_image", "selection": "remaining"}
+        ],
+        "output_inputs": [], "parameter_inputs": [], "prompt_recipe_id": "product_motion", "check_id": null,
+        "requirement_ids": ["identity", "clear_end"]
+      },
+      {
+        "id": "render", "kind": "render", "executor": "d", "scope": "once", "segment_id": null,
+        "depends_on": [
+          {"node_id": "hook_video", "binding": "all_instances"},
+          {"node_id": "feature_video", "binding": "all_instances"},
+          {"node_id": "hero_video", "binding": "all_instances"}
+        ],
+        "capability_id": "ordered_timeline_with_end_copy_v1",
+        "slot_inputs": [],
+        "output_inputs": [
+          {"node_id": "hook_video", "binding": "all_instances", "role": "source_media"},
+          {"node_id": "feature_video", "binding": "all_instances", "role": "source_media"},
+          {"node_id": "hero_video", "binding": "all_instances", "role": "source_media"}
+        ],
+        "parameter_inputs": [{"name": "end_copy", "variable": "params.end_copy"}],
+        "prompt_recipe_id": null, "check_id": null, "requirement_ids": ["sequence"]
+      },
+      {
+        "id": "final_review", "kind": "check", "executor": "orchestrator", "scope": "once", "segment_id": null,
+        "depends_on": [{"node_id": "render", "binding": "all_instances"}],
+        "capability_id": "manual_final_review_v1",
+        "slot_inputs": [{"slot_id": "product", "role": "reference_image", "selection": "all"}],
+        "output_inputs": [{"node_id": "render", "binding": "all_instances", "role": "check_subject"}],
+        "parameter_inputs": [],
+        "prompt_recipe_id": null, "check_id": "visual_review", "requirement_ids": ["identity", "clear_end"]
+      }
+    ],
+    "requirements": [
+      {
+        "id": "sequence", "kind": "structural",
+        "description": "按局部开场、一个或多个产品展示、完整收尾的顺序播放，不得省略必需段。",
+        "target_segment_ids": ["hook", "feature", "hero"], "check_id": "structure_check", "observation_ids": ["obs_structure"]
+      },
+      {
+        "id": "identity", "kind": "visual",
+        "description": "核对各段与实际参考产品的外形、配色、部件和标签一致。",
+        "target_segment_ids": ["hook", "feature", "hero"], "check_id": "visual_review", "observation_ids": []
+      },
+      {
+        "id": "clear_end", "kind": "visual",
+        "description": "结尾至少两秒完整、清楚展示产品。",
+        "target_segment_ids": ["hero"], "check_id": "visual_review", "observation_ids": ["obs_structure"]
+      }
+    ],
+    "checks": [
+      {"id": "structure_check", "kind": "structural", "method_id": "segment_coverage_v1", "on_failure": "block", "max_repair_attempts": 0},
+      {"id": "visual_review", "kind": "manual_visual", "method_id": "product_visual_review_v1", "on_failure": "request_input", "max_repair_attempts": 0}
+    ],
+    "adaptation_policy": {
+      "allow_free_text": true, "editable_parameter_ids": ["end_copy"], "max_plan_repairs": 2, "outside_scope": "explicit_variant"
+    }
+  }
+}

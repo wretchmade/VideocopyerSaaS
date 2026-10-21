@@ -1,0 +1,104 @@
+.markdown {
+  white-space: normal;
+}
+.markdown p {
+  margin: 0 0 10px;
+}
+.markdown p:last-child {
+  margin-bottom: 0;
+}
+.markdown ul,
+.markdown ol {
+  padding-left: 19px;
+  margin: 8px 0;
+}
+.markdown li {
+  margin: 4px 0;
+}
+.markdown strong {
+  font-weight: 600;
+}
+.markdown code {
+  font-family: Consolas, monospace;
+  font-size: 0.9em;
+  background: #eaf0f5;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+.markdown pre {
+  background: #eef3f8;
+  padding: 12px;
+  border-radius: 6px;
+  overflow: auto;
+}
+.markdown a {
+  color: #315f93;
+  text-decoration: underline;
+}
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  font-size: 15px;
+  margin: 14px 0 8px;
+}
+
+.asset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.asset-card {
+  background: #fff;
+  border: 1px solid #d7e0e9;
+  border-radius: 8px;
+  padding: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.asset-card > img,
+.asset-card > video {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  background: #dce5ee;
+  border-radius: 4px;
+}
+.asset-card > audio {
+  width: 100%;
+}
+.asset-card strong {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.asset-card small {
+  color: #8b9aac;
+  font-size: 10px;
+}
+.asset-actions {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #6082a3;
+  gap: 6px;
+}
+.tabs {
+  gap: 16px;
+}
+.tabs button {
+  white-space: nowrap;
+}
+
+.remote-requests > div {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  padding-top: 10px;
+  color: #8192a6;
+}
+.remote-requests code {
+  font-family: Consolas, monospace;
+  font-size: 10px;
+}

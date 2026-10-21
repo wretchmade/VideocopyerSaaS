@@ -1,0 +1,28 @@
+node_modules/
+.venv/
+.venv-jianying/
+.local/
+__pycache__/
+.pytest_cache/
+dist/
+*.pyc
+.env
+.env.*
+!.env.example
+config.local.json
+config.*.local.json
+*.tsbuildinfo
+*.log
+*.sqlite*
+*.db
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Local execution evidence can contain signed media URLs and customer content.
+# Preserve it on disk, but do not publish it with the source repository.
+docs/**/evidence/
+!docs/evidence/
+docs/evidence/*
+!docs/evidence/codex-LICENSE

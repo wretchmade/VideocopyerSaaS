@@ -1,0 +1,2779 @@
+[
+  {
+    "name": "d_capabilities",
+    "description": "Inspect independent components, effects, media and provider/model coverage",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_storage_status",
+    "description": "Inspect storage configuration and credential references without reading secrets",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_authorize_budget",
+    "description": "Authorize a capped account/currency budget for one exact project revision",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "account": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "limitMicros": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "commandId",
+        "projectId",
+        "revision",
+        "account",
+        "currency",
+        "limitMicros",
+        "concurrency"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_reconcile_request",
+    "description": "Attach a confirmed provider task ID to an ambiguous submission without resubmitting",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "remoteId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId",
+        "requestId",
+        "remoteId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_transfer_workspace",
+    "description": "Import a licensed, supported existing D workspace revision without changing its database",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspace_id": {
+          "type": "string"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "commandId",
+        "workspace_id",
+        "expected_revision"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_create_project",
+    "description": "Create a D project and import checksum-pinned local assets",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "document": {
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "const": "d-project",
+              "default": "d-project",
+              "title": "Format",
+              "type": "string"
+            },
+            "version": {
+              "const": 1,
+              "default": 1,
+              "title": "Version",
+              "type": "integer"
+            },
+            "width": {
+              "default": 640,
+              "maximum": 4096,
+              "minimum": 16,
+              "title": "Width",
+              "type": "integer"
+            },
+            "height": {
+              "default": 360,
+              "maximum": 4096,
+              "minimum": 16,
+              "title": "Height",
+              "type": "integer"
+            },
+            "frames": {
+              "default": 90,
+              "maximum": 108000,
+              "minimum": 1,
+              "title": "Frames",
+              "type": "integer"
+            },
+            "fps": {
+              "$ref": "#/$defs/Rate"
+            },
+            "background": {
+              "default": "#000000",
+              "title": "Background",
+              "type": "string"
+            },
+            "output": {
+              "default": "mp4",
+              "enum": [
+                "mp4",
+                "mov-alpha"
+              ],
+              "title": "Output",
+              "type": "string"
+            },
+            "assets": {
+              "items": {
+                "$ref": "#/$defs/Asset"
+              },
+              "maxItems": 500,
+              "title": "Assets",
+              "type": "array"
+            },
+            "layers": {
+              "items": {
+                "$ref": "#/$defs/Layer"
+              },
+              "maxItems": 500,
+              "title": "Layers",
+              "type": "array"
+            },
+            "audio": {
+              "items": {
+                "$ref": "#/$defs/Audio"
+              },
+              "maxItems": 100,
+              "title": "Audio",
+              "type": "array"
+            },
+            "tasks": {
+              "items": {
+                "$ref": "#/$defs/Task"
+              },
+              "maxItems": 100,
+              "title": "Tasks",
+              "type": "array"
+            },
+            "transitions": {
+              "items": {
+                "$ref": "#/$defs/Transition"
+              },
+              "maxItems": 100,
+              "title": "Transitions",
+              "type": "array"
+            }
+          },
+          "title": "Project",
+          "type": "object"
+        }
+      },
+      "required": [
+        "commandId",
+        "name"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "Action": {
+          "additionalProperties": false,
+          "properties": {
+            "at": {
+              "minimum": 0,
+              "title": "At",
+              "type": "integer"
+            },
+            "action": {
+              "enum": [
+                "click",
+                "fill",
+                "scroll"
+              ],
+              "title": "Action",
+              "type": "string"
+            },
+            "selector": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Selector"
+            },
+            "text": {
+              "default": "",
+              "title": "Text",
+              "type": "string"
+            },
+            "y": {
+              "default": 0,
+              "title": "Y",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "at",
+            "action"
+          ],
+          "title": "Action",
+          "type": "object"
+        },
+        "Asset": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+              "title": "Id",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "image",
+                "video",
+                "audio",
+                "font",
+                "transcript"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "path": {
+              "minLength": 1,
+              "title": "Path",
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "title": "Sha256",
+              "type": "string"
+            },
+            "license": {
+              "minLength": 1,
+              "title": "License",
+              "type": "string"
+            },
+            "source": {
+              "minLength": 1,
+              "title": "Source",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "path",
+            "sha256",
+            "license",
+            "source"
+          ],
+          "title": "Asset",
+          "type": "object"
+        },
+        "Audio": {
+          "additionalProperties": false,
+          "properties": {
+            "asset": {
+              "title": "Asset",
+              "type": "string"
+            },
+            "start": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Start",
+              "type": "integer"
+            },
+            "end": {
+              "exclusiveMinimum": 0,
+              "title": "End",
+              "type": "integer"
+            },
+            "source_start": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Source Start",
+              "type": "integer"
+            },
+            "volume": {
+              "default": 1,
+              "maximum": 4,
+              "minimum": 0,
+              "title": "Volume",
+              "type": "number"
+            },
+            "fade_in": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Fade In",
+              "type": "integer"
+            },
+            "fade_out": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Fade Out",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "asset",
+            "end"
+          ],
+          "title": "Audio",
+          "type": "object"
+        },
+        "Capture": {
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "pattern": "^https?://",
+              "title": "Url",
+              "type": "string"
+            },
+            "width": {
+              "default": 1280,
+              "maximum": 4096,
+              "minimum": 16,
+              "title": "Width",
+              "type": "integer"
+            },
+            "height": {
+              "default": 720,
+              "maximum": 4096,
+              "minimum": 16,
+              "title": "Height",
+              "type": "integer"
+            },
+            "frames": {
+              "default": 1,
+              "maximum": 18000,
+              "minimum": 1,
+              "title": "Frames",
+              "type": "integer"
+            },
+            "fps": {
+              "$ref": "#/$defs/Rate"
+            },
+            "wait_selector": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Wait Selector"
+            },
+            "timeout_ms": {
+              "default": 30000,
+              "maximum": 120000,
+              "minimum": 100,
+              "title": "Timeout Ms",
+              "type": "integer"
+            },
+            "actions": {
+              "items": {
+                "$ref": "#/$defs/Action"
+              },
+              "maxItems": 500,
+              "title": "Actions",
+              "type": "array"
+            },
+            "allowed_origins": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Allowed Origins",
+              "type": "array"
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "title": "Capture",
+          "type": "object"
+        },
+        "Key": {
+          "additionalProperties": false,
+          "properties": {
+            "frame": {
+              "minimum": 0,
+              "title": "Frame",
+              "type": "integer"
+            },
+            "value": {
+              "title": "Value",
+              "type": "number"
+            },
+            "easing": {
+              "default": "linear",
+              "enum": [
+                "linear",
+                "hold",
+                "smooth"
+              ],
+              "title": "Easing",
+              "type": "string"
+            }
+          },
+          "required": [
+            "frame",
+            "value"
+          ],
+          "title": "Key",
+          "type": "object"
+        },
+        "Layer": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+              "title": "Id",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "rect",
+                "image",
+                "video",
+                "text",
+                "component"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "component": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Component"
+            },
+            "props": {
+              "additionalProperties": true,
+              "title": "Props",
+              "type": "object"
+            },
+            "asset": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Asset"
+            },
+            "start": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Start",
+              "type": "integer"
+            },
+            "end": {
+              "exclusiveMinimum": 0,
+              "title": "End",
+              "type": "integer"
+            },
+            "source_start": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Source Start",
+              "type": "integer"
+            },
+            "track": {
+              "default": 0,
+              "title": "Track",
+              "type": "integer"
+            },
+            "x": {
+              "default": 0,
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "default": 0,
+              "title": "Y",
+              "type": "number"
+            },
+            "width": {
+              "default": 320,
+              "maximum": 4096,
+              "minimum": 1,
+              "title": "Width",
+              "type": "integer"
+            },
+            "height": {
+              "default": 180,
+              "maximum": 4096,
+              "minimum": 1,
+              "title": "Height",
+              "type": "integer"
+            },
+            "fit": {
+              "default": "contain",
+              "enum": [
+                "contain",
+                "cover",
+                "stretch"
+              ],
+              "title": "Fit",
+              "type": "string"
+            },
+            "crop": {
+              "anyOf": [
+                {
+                  "maxItems": 4,
+                  "minItems": 4,
+                  "prefixItems": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "integer"
+                    }
+                  ],
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Crop"
+            },
+            "opacity": {
+              "default": 1,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Opacity",
+              "type": "number"
+            },
+            "rotation": {
+              "default": 0,
+              "title": "Rotation",
+              "type": "number"
+            },
+            "scale": {
+              "default": 1,
+              "exclusiveMinimum": 0,
+              "maximum": 8,
+              "title": "Scale",
+              "type": "number"
+            },
+            "color": {
+              "default": "#ffffff",
+              "title": "Color",
+              "type": "string"
+            },
+            "keyframes": {
+              "additionalProperties": {
+                "items": {
+                  "$ref": "#/$defs/Key"
+                },
+                "type": "array"
+              },
+              "title": "Keyframes",
+              "type": "object"
+            },
+            "fade_in": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Fade In",
+              "type": "integer"
+            },
+            "fade_out": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Fade Out",
+              "type": "integer"
+            },
+            "text": {
+              "default": "",
+              "maxLength": 12000,
+              "title": "Text",
+              "type": "string"
+            },
+            "transcript": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Transcript"
+            },
+            "text_align": {
+              "default": "left",
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ],
+              "title": "Text Align",
+              "type": "string"
+            },
+            "vertical_align": {
+              "default": "top",
+              "enum": [
+                "top",
+                "middle",
+                "bottom"
+              ],
+              "title": "Vertical Align",
+              "type": "string"
+            },
+            "fonts": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Fonts",
+              "type": "array"
+            },
+            "font_size": {
+              "default": 32,
+              "maximum": 512,
+              "minimum": 1,
+              "title": "Font Size",
+              "type": "integer"
+            },
+            "line_spacing": {
+              "default": 8,
+              "maximum": 256,
+              "minimum": 0,
+              "title": "Line Spacing",
+              "type": "integer"
+            },
+            "stroke": {
+              "default": 0,
+              "maximum": 32,
+              "minimum": 0,
+              "title": "Stroke",
+              "type": "integer"
+            },
+            "stroke_color": {
+              "default": "#000000",
+              "title": "Stroke Color",
+              "type": "string"
+            },
+            "shadow": {
+              "default": [
+                0,
+                0
+              ],
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "title": "Shadow",
+              "type": "array"
+            },
+            "shadow_color": {
+              "default": "#00000080",
+              "title": "Shadow Color",
+              "type": "string"
+            },
+            "highlight": {
+              "default": "#ffff00",
+              "title": "Highlight",
+              "type": "string"
+            },
+            "words": {
+              "items": {
+                "$ref": "#/$defs/Word"
+              },
+              "maxItems": 2000,
+              "title": "Words",
+              "type": "array"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "end"
+          ],
+          "title": "Layer",
+          "type": "object"
+        },
+        "Rate": {
+          "additionalProperties": false,
+          "properties": {
+            "num": {
+              "default": 30,
+              "maximum": 120000,
+              "minimum": 1,
+              "title": "Num",
+              "type": "integer"
+            },
+            "den": {
+              "default": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Den",
+              "type": "integer"
+            }
+          },
+          "title": "Rate",
+          "type": "object"
+        },
+        "Task": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+              "title": "Id",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "capture",
+                "generation",
+                "media",
+                "speech"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "depends_on": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Depends On",
+              "type": "array"
+            },
+            "capture": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Capture"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "provider": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Provider"
+            },
+            "prompt": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Prompt"
+            },
+            "operation": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Operation"
+            },
+            "inputs": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 40,
+              "title": "Inputs",
+              "type": "array"
+            },
+            "input_roles": {
+              "items": {
+                "enum": [
+                  "first_frame",
+                  "last_frame",
+                  "reference_image",
+                  "reference_video",
+                  "reference_audio"
+                ],
+                "type": "string"
+              },
+              "maxItems": 40,
+              "title": "Input Roles",
+              "type": "array"
+            },
+            "options": {
+              "additionalProperties": true,
+              "title": "Options",
+              "type": "object"
+            },
+            "model": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Model"
+            },
+            "output_kind": {
+              "default": "video",
+              "enum": [
+                "image",
+                "video",
+                "audio",
+                "transcript"
+              ],
+              "title": "Output Kind",
+              "type": "string"
+            },
+            "budget": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Budget"
+            },
+            "max_cost_micros": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Max Cost Micros",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "kind"
+          ],
+          "title": "Task",
+          "type": "object"
+        },
+        "Transition": {
+          "additionalProperties": false,
+          "properties": {
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "target": {
+              "title": "Target",
+              "type": "string"
+            },
+            "start": {
+              "minimum": 0,
+              "title": "Start",
+              "type": "integer"
+            },
+            "end": {
+              "exclusiveMinimum": 0,
+              "title": "End",
+              "type": "integer"
+            },
+            "kind": {
+              "default": "crossfade",
+              "enum": [
+                "crossfade",
+                "wipe",
+                "push"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "direction": {
+              "default": "left",
+              "enum": [
+                "left",
+                "right",
+                "up",
+                "down"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          "required": [
+            "source",
+            "target",
+            "start",
+            "end"
+          ],
+          "title": "Transition",
+          "type": "object"
+        },
+        "Word": {
+          "additionalProperties": false,
+          "properties": {
+            "text": {
+              "minLength": 1,
+              "title": "Text",
+              "type": "string"
+            },
+            "start": {
+              "minimum": 0,
+              "title": "Start",
+              "type": "integer"
+            },
+            "end": {
+              "exclusiveMinimum": 0,
+              "title": "End",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "text",
+            "start",
+            "end"
+          ],
+          "title": "Word",
+          "type": "object"
+        }
+      }
+    }
+  },
+  {
+    "name": "d_edit_project",
+    "description": "Commit an immutable D revision with optimistic concurrency",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "baseRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "document": {
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "const": "d-project",
+              "default": "d-project",
+              "title": "Format",
+              "type": "string"
+            },
+            "version": {
+              "const": 1,
+              "default": 1,
+              "title": "Version",
+              "type": "integer"
+            },
+            "width": {
+              "default": 640,
+              "maximum": 4096,
+              "minimum": 16,
+              "title": "Width",
+              "type": "integer"
+            },
+            "height": {
+              "default": 360,
+              "maximum": 4096,
+              "minimum": 16,
+              "title": "Height",
+              "type": "integer"
+            },
+            "frames": {
+              "default": 90,
+              "maximum": 108000,
+              "minimum": 1,
+              "title": "Frames",
+              "type": "integer"
+            },
+            "fps": {
+              "$ref": "#/$defs/Rate"
+            },
+            "background": {
+              "default": "#000000",
+              "title": "Background",
+              "type": "string"
+            },
+            "output": {
+              "default": "mp4",
+              "enum": [
+                "mp4",
+                "mov-alpha"
+              ],
+              "title": "Output",
+              "type": "string"
+            },
+            "assets": {
+              "items": {
+                "$ref": "#/$defs/Asset"
+              },
+              "maxItems": 500,
+              "title": "Assets",
+              "type": "array"
+            },
+            "layers": {
+              "items": {
+                "$ref": "#/$defs/Layer"
+              },
+              "maxItems": 500,
+              "title": "Layers",
+              "type": "array"
+            },
+            "audio": {
+              "items": {
+                "$ref": "#/$defs/Audio"
+              },
+              "maxItems": 100,
+              "title": "Audio",
+              "type": "array"
+            },
+            "tasks": {
+              "items": {
+                "$ref": "#/$defs/Task"
+              },
+              "maxItems": 100,
+              "title": "Tasks",
+              "type": "array"
+            },
+            "transitions": {
+              "items": {
+                "$ref": "#/$defs/Transition"
+              },
+              "maxItems": 100,
+              "title": "Transitions",
+              "type": "array"
+            }
+          },
+          "title": "Project",
+          "type": "object"
+        }
+      },
+      "required": [
+        "commandId",
+        "projectId",
+        "baseRevision",
+        "document"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "Action": {
+          "additionalProperties": false,
+          "properties": {
+            "at": {
+              "minimum": 0,
+              "title": "At",
+              "type": "integer"
+            },
+            "action": {
+              "enum": [
+                "click",
+                "fill",
+                "scroll"
+              ],
+              "title": "Action",
+              "type": "string"
+            },
+            "selector": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Selector"
+            },
+            "text": {
+              "default": "",
+              "title": "Text",
+              "type": "string"
+            },
+            "y": {
+              "default": 0,
+              "title": "Y",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "at",
+            "action"
+          ],
+          "title": "Action",
+          "type": "object"
+        },
+        "Asset": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+              "title": "Id",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "image",
+                "video",
+                "audio",
+                "font",
+                "transcript"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "path": {
+              "minLength": 1,
+              "title": "Path",
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "title": "Sha256",
+              "type": "string"
+            },
+            "license": {
+              "minLength": 1,
+              "title": "License",
+              "type": "string"
+            },
+            "source": {
+              "minLength": 1,
+              "title": "Source",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "path",
+            "sha256",
+            "license",
+            "source"
+          ],
+          "title": "Asset",
+          "type": "object"
+        },
+        "Audio": {
+          "additionalProperties": false,
+          "properties": {
+            "asset": {
+              "title": "Asset",
+              "type": "string"
+            },
+            "start": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Start",
+              "type": "integer"
+            },
+            "end": {
+              "exclusiveMinimum": 0,
+              "title": "End",
+              "type": "integer"
+            },
+            "source_start": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Source Start",
+              "type": "integer"
+            },
+            "volume": {
+              "default": 1,
+              "maximum": 4,
+              "minimum": 0,
+              "title": "Volume",
+              "type": "number"
+            },
+            "fade_in": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Fade In",
+              "type": "integer"
+            },
+            "fade_out": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Fade Out",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "asset",
+            "end"
+          ],
+          "title": "Audio",
+          "type": "object"
+        },
+        "Capture": {
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "pattern": "^https?://",
+              "title": "Url",
+              "type": "string"
+            },
+            "width": {
+              "default": 1280,
+              "maximum": 4096,
+              "minimum": 16,
+              "title": "Width",
+              "type": "integer"
+            },
+            "height": {
+              "default": 720,
+              "maximum": 4096,
+              "minimum": 16,
+              "title": "Height",
+              "type": "integer"
+            },
+            "frames": {
+              "default": 1,
+              "maximum": 18000,
+              "minimum": 1,
+              "title": "Frames",
+              "type": "integer"
+            },
+            "fps": {
+              "$ref": "#/$defs/Rate"
+            },
+            "wait_selector": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Wait Selector"
+            },
+            "timeout_ms": {
+              "default": 30000,
+              "maximum": 120000,
+              "minimum": 100,
+              "title": "Timeout Ms",
+              "type": "integer"
+            },
+            "actions": {
+              "items": {
+                "$ref": "#/$defs/Action"
+              },
+              "maxItems": 500,
+              "title": "Actions",
+              "type": "array"
+            },
+            "allowed_origins": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Allowed Origins",
+              "type": "array"
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "title": "Capture",
+          "type": "object"
+        },
+        "Key": {
+          "additionalProperties": false,
+          "properties": {
+            "frame": {
+              "minimum": 0,
+              "title": "Frame",
+              "type": "integer"
+            },
+            "value": {
+              "title": "Value",
+              "type": "number"
+            },
+            "easing": {
+              "default": "linear",
+              "enum": [
+                "linear",
+                "hold",
+                "smooth"
+              ],
+              "title": "Easing",
+              "type": "string"
+            }
+          },
+          "required": [
+            "frame",
+            "value"
+          ],
+          "title": "Key",
+          "type": "object"
+        },
+        "Layer": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+              "title": "Id",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "rect",
+                "image",
+                "video",
+                "text",
+                "component"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "component": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Component"
+            },
+            "props": {
+              "additionalProperties": true,
+              "title": "Props",
+              "type": "object"
+            },
+            "asset": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Asset"
+            },
+            "start": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Start",
+              "type": "integer"
+            },
+            "end": {
+              "exclusiveMinimum": 0,
+              "title": "End",
+              "type": "integer"
+            },
+            "source_start": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Source Start",
+              "type": "integer"
+            },
+            "track": {
+              "default": 0,
+              "title": "Track",
+              "type": "integer"
+            },
+            "x": {
+              "default": 0,
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "default": 0,
+              "title": "Y",
+              "type": "number"
+            },
+            "width": {
+              "default": 320,
+              "maximum": 4096,
+              "minimum": 1,
+              "title": "Width",
+              "type": "integer"
+            },
+            "height": {
+              "default": 180,
+              "maximum": 4096,
+              "minimum": 1,
+              "title": "Height",
+              "type": "integer"
+            },
+            "fit": {
+              "default": "contain",
+              "enum": [
+                "contain",
+                "cover",
+                "stretch"
+              ],
+              "title": "Fit",
+              "type": "string"
+            },
+            "crop": {
+              "anyOf": [
+                {
+                  "maxItems": 4,
+                  "minItems": 4,
+                  "prefixItems": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "integer"
+                    }
+                  ],
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Crop"
+            },
+            "opacity": {
+              "default": 1,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Opacity",
+              "type": "number"
+            },
+            "rotation": {
+              "default": 0,
+              "title": "Rotation",
+              "type": "number"
+            },
+            "scale": {
+              "default": 1,
+              "exclusiveMinimum": 0,
+              "maximum": 8,
+              "title": "Scale",
+              "type": "number"
+            },
+            "color": {
+              "default": "#ffffff",
+              "title": "Color",
+              "type": "string"
+            },
+            "keyframes": {
+              "additionalProperties": {
+                "items": {
+                  "$ref": "#/$defs/Key"
+                },
+                "type": "array"
+              },
+              "title": "Keyframes",
+              "type": "object"
+            },
+            "fade_in": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Fade In",
+              "type": "integer"
+            },
+            "fade_out": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Fade Out",
+              "type": "integer"
+            },
+            "text": {
+              "default": "",
+              "maxLength": 12000,
+              "title": "Text",
+              "type": "string"
+            },
+            "transcript": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Transcript"
+            },
+            "text_align": {
+              "default": "left",
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ],
+              "title": "Text Align",
+              "type": "string"
+            },
+            "vertical_align": {
+              "default": "top",
+              "enum": [
+                "top",
+                "middle",
+                "bottom"
+              ],
+              "title": "Vertical Align",
+              "type": "string"
+            },
+            "fonts": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Fonts",
+              "type": "array"
+            },
+            "font_size": {
+              "default": 32,
+              "maximum": 512,
+              "minimum": 1,
+              "title": "Font Size",
+              "type": "integer"
+            },
+            "line_spacing": {
+              "default": 8,
+              "maximum": 256,
+              "minimum": 0,
+              "title": "Line Spacing",
+              "type": "integer"
+            },
+            "stroke": {
+              "default": 0,
+              "maximum": 32,
+              "minimum": 0,
+              "title": "Stroke",
+              "type": "integer"
+            },
+            "stroke_color": {
+              "default": "#000000",
+              "title": "Stroke Color",
+              "type": "string"
+            },
+            "shadow": {
+              "default": [
+                0,
+                0
+              ],
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "title": "Shadow",
+              "type": "array"
+            },
+            "shadow_color": {
+              "default": "#00000080",
+              "title": "Shadow Color",
+              "type": "string"
+            },
+            "highlight": {
+              "default": "#ffff00",
+              "title": "Highlight",
+              "type": "string"
+            },
+            "words": {
+              "items": {
+                "$ref": "#/$defs/Word"
+              },
+              "maxItems": 2000,
+              "title": "Words",
+              "type": "array"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "end"
+          ],
+          "title": "Layer",
+          "type": "object"
+        },
+        "Rate": {
+          "additionalProperties": false,
+          "properties": {
+            "num": {
+              "default": 30,
+              "maximum": 120000,
+              "minimum": 1,
+              "title": "Num",
+              "type": "integer"
+            },
+            "den": {
+              "default": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Den",
+              "type": "integer"
+            }
+          },
+          "title": "Rate",
+          "type": "object"
+        },
+        "Task": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+              "title": "Id",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "capture",
+                "generation",
+                "media",
+                "speech"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "depends_on": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Depends On",
+              "type": "array"
+            },
+            "capture": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Capture"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "provider": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Provider"
+            },
+            "prompt": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Prompt"
+            },
+            "operation": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Operation"
+            },
+            "inputs": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 40,
+              "title": "Inputs",
+              "type": "array"
+            },
+            "input_roles": {
+              "items": {
+                "enum": [
+                  "first_frame",
+                  "last_frame",
+                  "reference_image",
+                  "reference_video",
+                  "reference_audio"
+                ],
+                "type": "string"
+              },
+              "maxItems": 40,
+              "title": "Input Roles",
+              "type": "array"
+            },
+            "options": {
+              "additionalProperties": true,
+              "title": "Options",
+              "type": "object"
+            },
+            "model": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Model"
+            },
+            "output_kind": {
+              "default": "video",
+              "enum": [
+                "image",
+                "video",
+                "audio",
+                "transcript"
+              ],
+              "title": "Output Kind",
+              "type": "string"
+            },
+            "budget": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Budget"
+            },
+            "max_cost_micros": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Max Cost Micros",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "kind"
+          ],
+          "title": "Task",
+          "type": "object"
+        },
+        "Transition": {
+          "additionalProperties": false,
+          "properties": {
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "target": {
+              "title": "Target",
+              "type": "string"
+            },
+            "start": {
+              "minimum": 0,
+              "title": "Start",
+              "type": "integer"
+            },
+            "end": {
+              "exclusiveMinimum": 0,
+              "title": "End",
+              "type": "integer"
+            },
+            "kind": {
+              "default": "crossfade",
+              "enum": [
+                "crossfade",
+                "wipe",
+                "push"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "direction": {
+              "default": "left",
+              "enum": [
+                "left",
+                "right",
+                "up",
+                "down"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          "required": [
+            "source",
+            "target",
+            "start",
+            "end"
+          ],
+          "title": "Transition",
+          "type": "object"
+        },
+        "Word": {
+          "additionalProperties": false,
+          "properties": {
+            "text": {
+              "minLength": 1,
+              "title": "Text",
+              "type": "string"
+            },
+            "start": {
+              "minimum": 0,
+              "title": "Start",
+              "type": "integer"
+            },
+            "end": {
+              "exclusiveMinimum": 0,
+              "title": "End",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "text",
+            "start",
+            "end"
+          ],
+          "title": "Word",
+          "type": "object"
+        }
+      }
+    }
+  },
+  {
+    "name": "d_list_projects",
+    "description": "List D production projects",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_inspect_project",
+    "description": "Read an exact project revision",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "projectId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_check_project",
+    "description": "Validate the D project, asset identities and executable boundary",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "projectId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_plan_build",
+    "description": "Plan the local dependency graph with runtime identities",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "projectId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_submit_build",
+    "description": "Submit a frozen local render; retries with the same commandId do not execute twice",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "commandId",
+        "projectId",
+        "revision"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_build_status",
+    "description": "Query and recover durable execution state",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "buildId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "buildId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_inspect_build",
+    "description": "Read execution, node checkpoints, output and errors",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "buildId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "buildId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_cancel_build",
+    "description": "Cancel queued or running execution",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "buildId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId",
+        "buildId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_retry_build",
+    "description": "Explicitly resume failed or cancelled execution from validated checkpoints",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "buildId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId",
+        "buildId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_preview_frame",
+    "description": "Render an exact frame PNG from a D revision",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string"
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "projectId",
+        "frame"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_deliver_mp4",
+    "description": "Verify and archive a successful MP4 or alpha MOV with a delivery receipt",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "buildId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId",
+        "buildId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_prepare_studio",
+    "description": "Create a checksum-pinned review copy of one successful build",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "buildId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId",
+        "buildId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_add_feedback",
+    "description": "Attach feedback to an exact review revision and frame",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "reviewId": {
+          "type": "string"
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "body": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId",
+        "reviewId",
+        "frame",
+        "body"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_resolve_feedback",
+    "description": "Resolve a versioned review comment",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "feedbackId": {
+          "type": "string"
+        },
+        "baseVersion": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId",
+        "feedbackId",
+        "baseVersion"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_reopen_feedback",
+    "description": "Reopen a versioned review comment",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "feedbackId": {
+          "type": "string"
+        },
+        "baseVersion": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId",
+        "feedbackId",
+        "baseVersion"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_get_feedback",
+    "description": "Read review comments, exact binding and event history",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "reviewId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reviewId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_sync_feedback",
+    "description": "Import uniquely identified offline comments into the same reviewed revision",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "reviewId": {
+          "type": "string"
+        },
+        "documentHash": {
+          "type": "string"
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "required": [
+        "commandId",
+        "reviewId",
+        "documentHash",
+        "comments"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_save_view",
+    "description": "Persist task groups, card layout and viewport for one exact revision",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "baseVersion": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "view": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "commandId",
+        "projectId",
+        "revision",
+        "baseVersion",
+        "view"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_canvas_status",
+    "description": "Read a revision view and browser-visible receipts",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "projectId",
+        "revision"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_record_view",
+    "description": "Record an actual rendered/visible browser acknowledgement, not service readiness",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "documentHash": {
+          "type": "string"
+        },
+        "viewVersion": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "session": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId",
+        "projectId",
+        "revision",
+        "documentHash",
+        "viewVersion",
+        "session",
+        "visibility"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_archive_workflow",
+    "description": "Archive a self-contained D project and licensed assets without budget or credentials",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "name": {
+          "type": "string"
+        },
+        "parameterDeclarations": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "required": [
+        "commandId",
+        "projectId",
+        "revision",
+        "name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_list_workflows",
+    "description": "Search the rebuildable workflow index",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_rebuild_index",
+    "description": "Rebuild workflow search metadata from integrity-checked archives",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_preflight_reuse",
+    "description": "Check replacement inputs, missing assets and compatibility before reuse",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workflowId": {
+          "type": "string"
+        },
+        "replacements": {
+          "type": "object"
+        },
+        "bindings": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "parameters": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "workflowId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_instantiate_workflow",
+    "description": "Create an independent project from explicit workflow inputs; no inherited budget",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "workflowId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "replacements": {
+          "type": "object"
+        },
+        "bindings": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "parameters": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "commandId",
+        "workflowId",
+        "name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_retention_check",
+    "description": "Report retained revision/build/review/workflow references without deleting files",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sha256"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_choose_export",
+    "description": "Record a user export choice bound to one immutable delivery",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "deliveryId": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "allowBaked": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "commandId",
+        "deliveryId",
+        "format",
+        "allowBaked"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_export_draft",
+    "description": "Create a managed editable draft from a delivery-bound export choice",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "choiceId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId",
+        "choiceId",
+        "name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_jianying_create",
+    "description": "Create an independent managed draft from an exact D project revision",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "name": {
+          "type": "string"
+        },
+        "allowBaked": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "commandId",
+        "projectId",
+        "revision",
+        "name",
+        "allowBaked"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_jianying_import",
+    "description": "Read a supported plaintext draft without modifying its source; reject encrypted or locked input",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "directory": {
+          "type": "string"
+        },
+        "expectedHash": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "assetLicenses": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "commandId",
+        "directory",
+        "expectedHash",
+        "name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_jianying_list",
+    "description": "List managed draft identities and current immutable revisions",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_jianying_inspect",
+    "description": "Inspect native tracks, media hashes and manual changes",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "draftId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "draftId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_jianying_edit",
+    "description": "Trim, split, move, change volume/text or delete using immutable draft revisions",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "draftId": {
+          "type": "string"
+        },
+        "baseRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expectedHash": {
+          "type": "string"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "required": [
+        "commandId",
+        "draftId",
+        "baseRevision",
+        "expectedHash",
+        "actions"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "d_jianying_publish",
+    "description": "Install an exact draft revision into a NEW explicit directory; never overwrite",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "draftId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expectedHash": {
+          "type": "string"
+        },
+        "directory": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId",
+        "draftId",
+        "revision",
+        "expectedHash",
+        "directory"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

@@ -1,0 +1,15 @@
+import {chromium} from '@playwright/test';
+import fs from 'node:fs/promises';
+const record=JSON.parse(await fs.readFile('docs/evidence/browser-project.json','utf8'));
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:1000}});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto(record.url);
+await page.getByRole('button',{name:'准备制作',exact:true}).click();
+await page.getByRole('heading',{name:'确认制作范围'}).waitFor();
+await page.screenshot({path:'docs/evidence/browser-budget.png',fullPage:true});
+await page.getByRole('button',{name:'授权此版本并开始',exact:true}).click();
+await page.getByRole('heading',{name:'制作任务',exact:true}).waitFor();
+await page.screenshot({path:'docs/evidence/browser-task.png',fullPage:true});
+await fs.writeFile('docs/evidence/browser-project.json',JSON.stringify({...record,phase:'submitted',errors},null,2));
+await browser.close();console.log(JSON.stringify({submitted:true,project:record.project,errors}));

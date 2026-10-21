@@ -1,0 +1,181 @@
+{
+  "format": "marketing-creative-template",
+  "schema_version": "0.1.0",
+  "template_id": "product-demo-result-first",
+  "revision": 1,
+  "status": "illustrative_draft",
+  "experience_scope": {
+    "tier": "evidence_required_assisted",
+    "default_consumer_baseline": false,
+    "note": "真实功效演示型；inputs是执行绑定要求，不是通用C端表单。普通展示模板参见product-reveal-template.example.json。"
+  },
+  "origin": {
+    "kind": "authored_example",
+    "source_ad_ids": [],
+    "note": "用于说明契约的虚构示例；未读取实际广告，未附真实素材，未通过 D 运行验收。"
+  },
+  "catalog": {
+    "title": "结果先行的产品演示广告",
+    "summary": "先展示有依据的结果，引出痛点，再展示解决过程和证据，最后引导行动。",
+    "suitable_for": ["有可视化效果且提供真实演示素材的实物产品"],
+    "unsuitable_for": ["没有效果证据却要求生成效果证明", "无法保持产品外观的高复杂度运动"],
+    "default_duration_ms": 20000,
+    "supported_aspects": ["9:16", "1:1"],
+    "preview_asset_id": null
+  },
+  "inputs": [
+    {"id": "brand_name", "kind": "text", "required": true, "max_length": 80},
+    {"id": "product_name", "kind": "text", "required": true, "max_length": 120},
+    {"id": "audience", "kind": "text", "required": true, "max_length": 300},
+    {"id": "pain_point", "kind": "text", "required": true, "max_length": 300},
+    {"id": "verified_benefit", "kind": "claim", "required": true, "requires_evidence": true, "fields": ["text", "evidence_asset_ids", "evidence_ranges_ms", "scope", "review_receipt_id"]},
+    {"id": "cta", "kind": "text", "required": true, "max_length": 120},
+    {"id": "brand_logo", "kind": "image", "required": true, "role": "brand_artwork", "requires_original_artwork": true},
+    {"id": "product_front", "kind": "image", "required": true, "role": "product_identity"},
+    {"id": "product_detail", "kind": "image", "required": true, "role": "label_and_structure_identity"},
+    {"id": "demo_evidence", "kind": "video", "required": true, "role": "user_product_demonstration", "must_match_product_identity": true},
+    {"id": "caption_font", "kind": "font", "required": true, "allow_brand_kit_default": true}
+  ],
+  "derived_bindings": [
+    {"id": "confirmed_product_description", "kind": "text", "from_slots": ["product_front", "product_detail"], "requires_review": true},
+    {"id": "approved_anchor_for_cta", "kind": "image", "from_slots": ["product_front", "product_detail"], "requires_review": true, "requires_sha256": true}
+  ],
+  "identity_policies": [
+    {
+      "id": "product_identity",
+      "input_slots": ["product_front", "product_detail"],
+      "description_source": "extract_from_bound_images_then_confirm",
+      "preserve": ["silhouette", "proportions", "color", "material", "component_count", "label_layout", "mark_spelling"],
+      "requires_reference_assets_in_generation_request": true,
+      "requires_approved_anchor_per_generated_shot": true,
+      "anchor_role": "first_frame",
+      "identity_role": "reference_image",
+      "allowed_camera": ["locked", "gentle"],
+      "on_unsupported_reference_combination": "block_or_offer_reviewed_still_composition",
+      "on_identity_failure": "reject_output"
+    },
+    {
+      "id": "brand_artwork",
+      "input_slots": ["brand_logo"],
+      "endcard_method": "composite_original_artwork",
+      "physical_mark_method": "preserve_bound_product_reference_and_review",
+      "physical_mark_fallback": "reviewed_surface_patch_if_supported_else_real_media",
+      "screen_overlay_substitutes_physical_mark": false,
+      "allow_model_redraw": false,
+      "requires_surface_motion_and_occlusion_consistency": true,
+      "on_failure": "reject_or_replan"
+    }
+  ],
+  "creative_logic": {
+    "id": "result_problem_demo_proof_cta",
+    "intent": "用结果制造好奇，再用可见过程和真实证据回答产品是否有效。",
+    "hook": {"type": "result_teaser", "must_start_by_ms": 0, "must_complete_by_ms": 2000, "requires_evidence_slot": "demo_evidence"},
+    "required_order": ["hook", "problem", "demo", "proof", "cta"],
+    "invariants": [
+      {"id": "creative_hook", "rule": "前两秒展示有依据的结果或结果局部，不以片头品牌介绍占满开场。"},
+      {"id": "creative_causality", "rule": "演示须让观众看清用户产品如何作用于痛点，不能只用漂亮产品镜头替代过程。"},
+      {"id": "creative_proof", "rule": "效果结论使用绑定的演示证据，不将生成画面或竞品效果作为本产品证明。"},
+      {"id": "creative_cta", "rule": "结尾出现准确的品牌、产品与一个行动指令。"}
+    ],
+    "adaptable": ["scene", "casting", "voice", "color_mood", "wording", "camera_within_identity_policy"],
+    "evidence_refs": [],
+    "interpretation_status": "authored_hypothesis_not_causal_performance_claim"
+  },
+  "beats": [
+    {
+      "id": "hook", "role": "result_teaser", "default_range_ms": [0, 2000],
+      "purpose": "先呈现结果，给观众继续观看的理由。",
+      "visual_recipe": "从 demo_evidence 中选取已确认结果的局部，保留后续解释空间。",
+      "asset_slots": ["demo_evidence"], "method": "edit_real_media",
+      "copy_pattern": "{{verified_benefit.text}}",
+      "requirement_refs": ["creative_hook", "creative_proof"],
+      "evidence_selection_required": true
+    },
+    {
+      "id": "problem", "role": "pain_point", "default_range_ms": [2000, 5000],
+      "purpose": "使目标用户认出与自身相关的问题。",
+      "visual_recipe": "使用演示素材中的处理前状态，与开场结果形成可理解的对照。",
+      "asset_slots": ["demo_evidence"], "method": "edit_real_media",
+      "copy_pattern": "{{audience}}遇到{{pain_point}}时，通常会怎么做？",
+      "requirement_refs": ["creative_causality", "creative_proof"],
+      "evidence_selection_required": true
+    },
+    {
+      "id": "demo", "role": "mechanism_demo", "default_range_ms": [5000, 12000],
+      "purpose": "清楚展示本产品的操作和效果形成过程。",
+      "visual_recipe": "剪辑用户真实演示，保留关键动作和因果连续性；不得倒放或剪接成不存在的效果。",
+      "asset_slots": ["demo_evidence", "product_front", "product_detail"], "method": "edit_real_media",
+      "copy_pattern": "使用{{product_name}}，展示实际操作步骤。",
+      "requirement_refs": ["creative_causality", "creative_proof", "product_identity"],
+      "evidence_selection_required": true
+    },
+    {
+      "id": "proof", "role": "proof", "default_range_ms": [12000, 16000],
+      "purpose": "用可追溯结果回答观众的怀疑。",
+      "visual_recipe": "从同一演示素材显示对应结果；仅在证据支持时加上具体数据。",
+      "asset_slots": ["demo_evidence"], "method": "edit_real_media",
+      "copy_pattern": "{{verified_benefit.text}}",
+      "requirement_refs": ["creative_proof"],
+      "evidence_selection_required": true
+    },
+    {
+      "id": "cta", "role": "brand_and_action", "default_range_ms": [16000, 20000],
+      "purpose": "让用户认清产品和品牌，并执行一个动作。",
+      "visual_recipe": "以用户产品建立确认过的主视觉首帧，使用轻微镜头运动；最后合成原始品牌标识和 CTA。",
+      "asset_slots": ["product_front", "product_detail", "brand_logo"], "method": "reference_guided_video_then_composite",
+      "copy_pattern": "{{brand_name}} {{product_name}} · {{cta}}",
+      "requirement_refs": ["creative_cta", "product_identity", "brand_artwork"],
+      "prompt_recipe_id": "product_hero",
+      "fallback_method": "approved_product_still_then_composite"
+    }
+  ],
+  "prompt_recipes": [
+    {
+      "id": "product_hero",
+      "operation": "image_to_video",
+      "request_inputs": [
+        {"binding": "approved_anchor_for_cta", "role": "first_frame"},
+        {"binding": "product_front", "role": "reference_image"},
+        {"binding": "product_detail", "role": "reference_image"}
+      ],
+      "sections": [
+        {"kind": "identity", "text": "以已绑定参考图中的同一产品为准。保留{{confirmed_product_description}}，不得替换款式、结构、标签布局或拼写。"},
+        {"kind": "creative", "text": "本镜头承担结尾产品识别与行动引导。构图简洁，让产品清晰可见，并为后期 CTA 留出空间。"},
+        {"kind": "motion", "text": "以确认首帧为构图锚点，只使用轻微镜头运动，保持产品连续一致。"},
+        {"kind": "surface", "text": "产品表面标识随对应表面的运动、透视和遮挡变化，不得变成固定在画面上的角标。"},
+        {"kind": "negative", "text": "不要新增商标、产品结构、效果数字或促销文字；片尾 Logo 和 CTA 由后期合成。"}
+      ],
+      "required_capabilities": ["first_frame_image_to_video", "additional_identity_references"],
+      "model_id": null
+    }
+  ],
+  "planning_rules": {
+    "require_template_binding": true,
+    "require_per_shot_beat_and_requirement_refs": true,
+    "require_per_task_input_hashes_and_output_contract": true,
+    "require_dependency_on_anchor_review_for_generation": true,
+    "require_source_ranges_for_real_media": true,
+    "require_coverage_report": true,
+    "on_missing_required_input": "await_input",
+    "on_changed_creative_invariant": "require_explicit_template_variant",
+    "allowed_fallbacks": ["approved_product_still_then_composite"]
+  },
+  "quality_gates": [
+    {"id": "input_binding", "stage": "before_planning", "check": "必填素材可读、哈希和租户归属有效，演示素材确属用户产品，benefit 有证据引用。"},
+    {"id": "identity_anchor", "stage": "before_generation", "check": "产品描述与每个生成镜头的首帧已确认，未保留竞品商标。"},
+    {"id": "creative_coverage", "stage": "before_execution", "check": "五个 beat 顺序正确，每条核心要求被分镜和任务覆盖。"},
+    {"id": "generation_identity", "stage": "after_generation", "check": "核对产品轮廓、部件、颜色、标签和标识随物体运动的表现。"},
+    {"id": "final_review", "stage": "before_delivery", "check": "检查成片钩子、因果过程、效果证据、品牌识别、文字和声音；自动检查不能代替视觉核对。"}
+  ],
+  "execution_contract": {
+    "planner_format": "template-bound-plan",
+    "planner_schema_version": "0.1.0",
+    "compiler": "marketing-template-to-d",
+    "compiler_status": "proposed",
+    "target": "d-project",
+    "capability_check_required": true,
+    "unsupported_capability_policy": "block_or_explicit_supported_fallback",
+    "native_workflow_id": null,
+    "validation_receipts": []
+  }
+}
