@@ -235,6 +235,8 @@ function App() {
         event.data.item?.type === "agentMessage"
       )
         setStream("");
+      else if (event.kind === "agent/error")
+        setError(event.data.message || "Agent 执行失败");
       if (!event.kind.endsWith("/delta"))
         setActivity((a) => [...a.slice(-60), event]);
       if (
