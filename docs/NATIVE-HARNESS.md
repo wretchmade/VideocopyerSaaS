@@ -4,57 +4,73 @@
 
 当前分支同时支持 native 与 Codex，默认仍为 Codex。native 的核心仍是自研 `NativeRunner`；本轮落地的是两种底座共用的规划网关连接池。PydanticAI 仅在隔离脚本中验证，未进入产品运行路径。
 
+### 1. 主流程：从会话到视频交付
+
+从上往下读。蓝色是交互与规划，绿色是制作执行，橙色是本轮更新的共享网关。图中只画主调用方向，响应沿原路返回。
+
 ```mermaid
 flowchart TB
-    UI["浏览器：会话、画布、报价确认"]
-    subgraph APIProcess["FastAPI 后端进程 / asyncio"]
-        API["main.py：API / SSE"]
-        Inbox["coordinator.py：持久收件箱调度"]
-        Select{"bridge.runner(pid)"}
-        Native["NativeRunner：模型 / 工具循环"]
-        Bridge["AgentRunner：Codex stdio 适配"]
-        Tools["AgentTools：参数校验 / 提问 / 工具结果"]
-        Commands["commands / D 核心：项目与制作授权"]
-        Gateway["gateway：项目令牌 / 工具白名单 / 预算预留"]
-        Pool["HTTPX AsyncClient：应用生命周期连接池"]
-    end
-    subgraph CodexProcesses["仅 Codex 模式：项目级子进程"]
-        Codex["Codex App Server 0.163.0"]
-        MCP["project_mcp：默认工具传输"]
-    end
-    Control[("控制数据库：inbox / 会话 / 回执 / 费用 / 事件")]
-    Project[("每项目 D 执行库 / 持久制作任务")]
-    Worker["独立 Worker：制作 / 渲染 / 导出"]
-    Model["规划模型供应商 / Responses"]
-    Media["媒体供应商 / FFmpeg / MP4 与剪映 ZIP"]
-
-    UI <-->|"HTTP / SSE"| API
-    API -->|"持久化消息"| Control
-    Control -->|"待处理 inbox"| Inbox
-    Inbox --> Select
-    Select -->|"native"| Native
-    Select -->|"codex（默认）"| Bridge
-    Bridge <-->|"stdio RPC / 事件"| Codex
-    Native -->|"进程内 agent_response"| Gateway
-    Codex -->|"私有 HTTP /gateway"| Gateway
-    Gateway --> Pool --> Model
-    Gateway -->|"预留 / 结果 / 待核对"| Control
-    Native -->|"完整历史 / 工具回执"| Control
-    Native --> Tools
-    Codex -->|"MCP"| MCP
-    MCP -->|"私有 HTTP /tools"| Tools
-    Bridge -->|"可选 dynamic 工具回调"| Tools
-    Tools --> Commands
-    API -->|"用户确认报价"| Commands
-    Commands --> Project
-    Project <--> Worker
-    Worker --> Media
-    Worker -->|"后台终态入 inbox"| Control
+    UI["浏览器工作台"] --> API["FastAPI / 持久收件箱"]
+    API --> Agent["项目 Agent<br/>native 或 Codex，二选一"]
+    Agent -->|"请求规划"| Gateway["共享计费网关<br/>HTTP 连接池 · 本轮新增"]
+    Gateway --> Model["规划模型供应商"]
+    Agent -->|"调用工具"| Tools["AgentTools<br/>校验 / 提问 / 结果回填"]
+    Tools --> Business["commands / D 核心<br/>项目操作与制作授权检查"]
+    Business -->|"制作获用户授权后"| Jobs["持久制作任务"]
+    Jobs --> Worker["独立 Worker<br/>媒体生成 / FFmpeg / 导出"]
+    Worker --> Output["MP4 + 剪映 ZIP"]
+    classDef plan fill:#eff6ff,stroke:#2563eb,color:#172554
+    classDef execution fill:#f0fdf4,stroke:#16a34a,color:#14532d
+    classDef changed fill:#fff7ed,stroke:#ea580c,color:#7c2d12,stroke-width:2px
+    class UI,API,Agent,Model plan
+    class Tools,Business,Jobs,Worker,Output execution
+    class Gateway changed
 ```
 
-图中箭头表示主要调用和持久化方向，模型流与工具结果沿原调用返回。两种 Agent 路径按配置二选一；Codex 的 MCP 和 dynamic 也是两种工具接入方式。Worker 独立于 Agent 循环，模型提出制作请求仍须通过后端用户授权。
+用户确认报价通过 API 写入业务授权；模型的工具调用不能代替确认。Worker 完成后将终态写入持久收件箱，由协调器再次唤醒 Agent，结果通过 API / SSE 返回工作台。
 
-连接池由 `main.lifespan` 在启动 Worker 和协调器前创建，在关闭所有 Agent 后释放。每个模型请求单独设置凭据、不转发上游 Cookie；结束或取消只关闭自己的响应，不关闭共享池。没有 lifespan 的独立调用使用请求级客户端；连接中断或未知结果不自动重试。
+| 持久化位置 | 保存什么 | 使用方 |
+|---|---|---|
+| 控制数据库 | 收件箱、native 会话与工具回执、提问、费用、前端事件 | API、协调器、NativeRunner、网关 |
+| 每项目 D 执行库 | 项目修订、授权、制作任务与执行结果 | commands / D 核心、Worker |
+| 本地文件目录 | 附件、素材、MP4、剪映 ZIP；独立 Codex 会话 | API、Worker、Codex |
+
+### 2. native 与 Codex：替换的是 Agent 循环
+
+下面两条路径互斥。绿色路径运行在 FastAPI 进程内；紫色路径需要项目级 Codex 子进程。两者最终使用同一套业务工具和计费网关。
+
+```mermaid
+flowchart TB
+    subgraph NativePath["native：后端进程内"]
+        direction TB
+        N1["协调器"] --> N2["NativeRunner<br/>自研模型 / 工具循环"]
+        N2 -->|"直接函数调用"| N3["AgentTools / 计费网关"]
+    end
+    subgraph CodexPath["Codex：后端适配 + 独立子进程"]
+        direction TB
+        C1["协调器"] --> C2["AgentRunner<br/>stdio 适配"]
+        C2 -->|"stdio RPC"| C3["Codex App Server<br/>模型 / 工具循环"]
+        C3 -->|"工具与模型接入"| C4["AgentTools / 计费网关"]
+    end
+    classDef native fill:#f0fdf4,stroke:#16a34a,color:#14532d
+    classDef codex fill:#faf5ff,stroke:#9333ea,color:#581c87
+    class N1,N2,N3 native
+    class C1,C2,C3,C4 codex
+```
+
+两个图框末端表示同一组共享服务，重复绘制便于对照。Codex 模型请求经私有 HTTP 网关；工具默认走 MCP 子进程 → 私有 HTTP → AgentTools，也可配置 dynamic 回调，由 AgentRunner 调用 AgentTools。native 直接调用这些后端函数。
+
+### 3. 本轮更新：连接池的生命周期
+
+```mermaid
+flowchart LR
+    Start["服务启动"] --> Pool["创建共享<br/>HTTPX 客户端"]
+    Pool --> Run["启动 Worker / 协调器<br/>处理 Agent 请求"]
+    Run --> Stop["停止协调器<br/>关闭 Agent / Worker"]
+    Stop --> Close["关闭客户端<br/>释放连接池"]
+```
+
+`main.lifespan` 管理上述顺序。单个模型请求结束或取消时只关闭自己的响应，共享客户端继续复用。每次请求独立设置凭据、不转发上游 Cookie；连接中断或未知结果不自动重试。没有 lifespan 的独立调用使用请求级客户端。
 
 | 层 | native | Codex |
 |---|---|---|
@@ -65,14 +81,7 @@ flowchart TB
 
 ### 隔离候选：不属于产品架构
 
-```mermaid
-flowchart LR
-    Probe["pydantic_harness_probe.py"] --> SDK["独立虚拟环境：PydanticAI / OpenAI SDK"]
-    SDK <-->|"历史 / 延迟调用 / 恢复门禁"| State[("隔离 SQLite 与历史文件")]
-    SDK -->|"关闭自动重试"| TestGateway["隔离后端的真实计费网关"]
-    TestGateway --> Fixture["本机 Responses 替身"]
-    SDK -->|"get_project"| TestTools["隔离后端的真实工具网关"]
-```
+`scripts/pydantic_harness_probe.py` 在独立虚拟环境运行 PydanticAI，通过隔离后端的真实计费网关访问本机模型替身，并通过真实工具网关调用 `get_project`。历史和恢复状态存入隔离 SQLite / 文件，SDK 自动请求重试关闭。
 
 原型验证了跨进程提问恢复、重复恢复拦截及发送前历史处理。产品仍没有自动上下文压缩或跨进程恢复待回答问题；产品依赖未增加 PydanticAI。采用依据、限制和复现命令见[改进执行记录](NATIVE-HARNESS-IMPROVEMENT-PLAN-2026-10-22.md)，原版测试见[对比报告](NATIVE-HARNESS-COMPARISON-2026-10-22.md)。
 
