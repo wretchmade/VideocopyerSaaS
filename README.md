@@ -32,10 +32,18 @@ powershell -ExecutionPolicy Bypass -File scripts/setup.ps1 -Python "C:\Path\To\P
 
 要求 Python 3.12、Node 22+、经过核验的 LGPL FFmpeg/FFprobe，以及可用中文字体。独立剪映序列化环境由 setup 创建。锁文件为 `requirements.lock.txt`、`requirements-jianying.lock.txt`、`package-lock.json`。系统字体和 FFmpeg 二进制不随源码分发。
 
+然后在 Git Bash 运行配置向导，填入**火山方舟 API Key** 和 **Seedance 模型 ID**（只需这两项）：
+
+```bash
+bash scripts/setup-credentials.sh
+```
+
+Key 只存入 Windows 凭据库，规划模型与 Seedance 共用；向导生成 `.local/media-profile.json`，更新 `config.local.json`，并可重启服务。未配置时 Agent 会提示“规划 API 尚未配置”。COS 只在参考图上传和签名下载时需要，可稍后配置。
+
 ## 配置与数据
 
 - `config.local.json`：本机服务配置，已被 gitignore 排除；模板为 `config.example.json`。只保存配置路径、模型 ID 和凭据引用。
-- 规划、媒体与 COS 需使用自己的供应商配置与凭据引用；示例配置不包含密钥。Windows PasswordVault 需在实际用户账户下读取。
+- 规划、媒体与 COS 需使用自己的供应商配置与凭据引用；示例配置不包含密钥。规划和媒体用上面的配置向导填写。Windows PasswordVault 需在实际用户账户下读取。
 - 总测试上限 CNY 100，文本、媒体和 COS 都有持久预留记录。实际供应商账单未核对前 actual_micros 为 null，未知请求保留预算且禁止自动重发，不等同充值钱包。
 - 默认数据 `.local/data/`：控制数据库、附件、独立 Codex 会话、每项目 D 执行库和交付。停止服务后备份整个目录。
 - `VC_CONFIG` 选择配置文件，`VC_DATA` 选择数据根，`VC_DATABASE_URL` 可配置 PostgreSQL DSN，例如 `postgresql+psycopg://user:password@127.0.0.1:5432/videocopyer`。当前实测 SQLite WAL；PostgreSQL 路径待环境实测。本机不依赖 Docker。
