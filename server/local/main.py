@@ -70,7 +70,7 @@ async def interrupted(request,exc):return JSONResponse({'detail':'本地处理�
 def bootstrap():
     with db.transaction() as c:
         usage=db.all(c,'usage');used=sum(x['reserved_micros'] for x in usage if x['state']!='released')
-    return {'token':CSRF,'codex_version':'0.163.0','model':CONFIG.get('planning',{}).get('model'),'budget_micros':round(CONFIG.get('test_budget_cny',0)*1e6),'reserved_micros':used,'database':db.engine.dialect.name,'paid_configured':bool(CONFIG.get('media_profile'))}
+    return {'token':CSRF,'agent_runtime':bridge.runtime_name(),'codex_version':'0.163.0' if bridge.runtime_name()=='codex' else None,'model':CONFIG.get('planning',{}).get('model'),'budget_micros':round(CONFIG.get('test_budget_cny',0)*1e6),'reserved_micros':used,'database':db.engine.dialect.name,'paid_configured':bool(CONFIG.get('media_profile'))}
 
 @app.get('/api/projects')
 def list_projects():
@@ -154,18 +154,9 @@ async def stop(pid):
 @app.post('/api/projects/{pid}/questions/{qid}')
 async def answer(pid,qid,request:Request):
     b=await request.json()
-    with db.transaction() as c:
-        q=db.get(c,'question',qid,pid)
-        r=bridge.RUNNERS.get(pid)
-        if not r or qid not in r.requests:raise ValueError('提问会话已中断，请在对话中发送答案并继续')
-        if q['status']!='pending':return q
-        if q.get('access') and b['answer'].strip() in {'允许','确认','yes'}:
-            access=q['access']
-            if access['purpose']=='workspace_import':
-                q['grant']=commands.grant_workspace(c,pid,access['workspace_id'],access['expected_revision'],'access-'+qid)
-            else:q['grant']=commands.grant_local(c,pid,access['path'],access['purpose'],'access-'+qid)
-        q.update(status='answered',answer=b['answer']);db.put(c,'question',qid,q,pid,True);projects.message(c,pid,'user',b['answer'])
-    r.requests[qid].set_result({'answer':b['answer'],**({'grant':q['grant']} if q.get('grant') else {})});return q
+    r=bridge.RUNNERS.get(pid)
+    if not r:raise ValueError('提问会话已中断，请在对话中发送答案并继续')
+    return await r.answer(qid,b['answer'])
 
 @app.get('/api/projects/{pid}/events')
 async def events(pid,request:Request,after:int=0):

@@ -1,4 +1,4 @@
-"""Real Codex/MCP/Web/FFmpeg with a scripted local Responses fixture, never a paid API."""
+"""Codex or native harness/Web/FFmpeg with local fixtures, never a paid API."""
 import json
 import os
 import socket
@@ -12,6 +12,7 @@ import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import httpx
+import psutil
 from PIL import Image
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -107,7 +108,9 @@ def main():
     with socket.socket() as sock:sock.bind(("127.0.0.1",0));port=sock.getsockname()[1]
     original=json.loads((ROOT/"config.local.json").read_text(encoding="utf-8-sig"))
     cfg={k:original[k] for k in ("ffmpeg","ffprobe","font")}
-    cfg.update(port=port,test_budget_cny=100,data_dir=str(WORK/"data"),media_profile="",
+    runtime=os.environ.get('VC_TEST_RUNTIME','codex')
+    if runtime not in {'codex','native'}:raise ValueError('VC_TEST_RUNTIME must be codex or native')
+    cfg.update(port=port,agent_runtime=runtime,test_budget_cny=100,data_dir=str(WORK/"data"),media_profile="",
                planning={"base_url":f"http://127.0.0.1:{mock.server_port}","model":original["planning"]["model"],
                          "key_env":"VC_PARITY_FAKE_KEY","input_cny_per_million":12,"output_cny_per_million":60,"max_output_tokens":1024})
     config=WORK/"config.json";config.write_text(json.dumps(cfg),encoding="utf8")
@@ -149,7 +152,15 @@ def main():
         def snapshot():return client.get(f"/api/projects/{pid}").json()
         planned=wait_for(lambda:snapshot() if snapshot().get("quotes") else None)
         wait_for(lambda:snapshot()["status"] not in {"starting","running"})
-        timings['scripted_planning_with_mcp_seconds']=round(time.perf_counter()-planning_started,3)
+        timings['scripted_planning_seconds']=round(time.perf_counter()-planning_started,3)
+        agent_processes=[]
+        for child in psutil.Process(process.pid).children(recursive=True):
+            try:
+                if child.name().lower().startswith('codex') or 'local.project_mcp' in child.cmdline():
+                    agent_processes.append({'pid':child.pid,'name':child.name()})
+            except psutil.NoSuchProcess:pass
+        if runtime=='native':assert not agent_processes,'Native runtime started an Agent subprocess'
+        else:assert agent_processes,'Expected real Codex process during Codex acceptance'
         assert len(requests)>=3,"Expected tool-result -> next model turn loop"
         assert all(r["model"]==original["planning"]["model"] for r in requests)
         quote=planned["quotes"][0]
@@ -240,9 +251,11 @@ def main():
         final=execute_quote(subtitle);assert len(jobs)==7
         final_delivery=post(f"/projects/{pid}/deliver",{"task_id":final["id"],"allow_baked":False,"command_id":"fixture-final-paired"})
         assert client.get(f"/api/projects/{pid}/deliveries/{delivered['id']}/preview").is_success
-        evidence={"project":pid,"data":str(WORK),"base_url":str(client.base_url),"model_unchanged":original["planning"]["model"],
+        evidence={"project":pid,"runtime":runtime,"data":str(WORK),"base_url":str(client.base_url),"model_unchanged":original["planning"]["model"],
                   "scripted_fixture_not_model_quality":True,"provider_network":"loopback fixture only",
-                  "model_requests":len(requests),"mcp_tool_result_continuation":True,"background_terminal_inbox":True,
+                  "model_requests":len(requests),"tool_result_continuation":True,"background_terminal_inbox":True,
+                  "agent_subprocess_required":runtime=='codex',
+                  "agent_processes_after_planning":agent_processes,
                   "real_ffmpeg":True,"paired_delivery":delivered["id"],"image_result_return":True,
                   "worker_restart_no_duplicate_submit":True,"sse_last_event_id":True,
                   "stop_edit_B_reuse_AC":True,"completed_edit_BC":True,"unchanged_prompt_forced":True,
@@ -250,7 +263,7 @@ def main():
                   "old_delivery_download":True,"final_delivery":final_delivery["id"]}
         evidence['timings']=timings
         evidence['timing_scope']='Local fixture only; scripted planning is not real model latency or a production SLA'
-        (ROOT/"docs/evidence/parity/web-protocol.json").write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding="utf8")
+        (WORK/"summary.json").write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding="utf8")
         print(json.dumps(evidence,ensure_ascii=False))
     finally:
         (WORK/"model-requests.json").write_text(json.dumps(requests,ensure_ascii=False,indent=2),encoding="utf8")

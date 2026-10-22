@@ -8,7 +8,8 @@ base=f"http://127.0.0.1:{config.get('port',8765)}"
 verified=[];active=[]
 with httpx.Client(base_url=base,timeout=30,trust_env=False) as client:
     response=client.get('/api/bootstrap');response.raise_for_status();boot=response.json()
-    assert boot['codex_version']=='0.163.0' and boot['model']==config['planning']['model']
+    assert boot['agent_runtime']==config.get('agent_runtime','codex') and boot['model']==config['planning']['model']
+    if boot['agent_runtime']=='codex':assert boot['codex_version']=='0.163.0'
     projects=client.get('/api/projects').json()
     for p in projects:
         snapshot=client.get('/api/projects/'+p['id']).json()

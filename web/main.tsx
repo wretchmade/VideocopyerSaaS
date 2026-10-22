@@ -138,7 +138,7 @@ async function api(path: string, method = "GET", body?: any) {
 }
 const statusNames: Record<string, string> = {
   idle: "等待输入",
-  starting: "连接 Codex",
+  starting: "连接 Agent",
   running: "执行中",
   queued: "排队中",
   succeeded: "制作完成",
@@ -158,6 +158,7 @@ function App() {
       location.pathname.match(/^\/projects\/([a-f0-9]+)$/)?.[1] || "",
     ),
     [project, setProject] = useState<Project | null>(null);
+  const agentLabel = boot?.agent_runtime === "native" ? "VideoCopyer Agent" : "Codex";
   const [text, setText] = useState(""),
     [attachments, setAttachments] = useState<File[]>([]),
     [busy, setBusy] = useState(false),
@@ -640,7 +641,7 @@ function App() {
               >
                 <div className="conversation-title">
                   <span className="codex-mark">✳</span>
-                  <strong>Codex</strong>
+                  <strong>{agentLabel}</strong>
                   <small>{boot?.model?.replace("doubao-", "")}</small>
                 </div>
                 <div className="messages">
@@ -650,7 +651,7 @@ function App() {
                         {m.role === "user"
                           ? "你"
                           : m.role === "assistant"
-                            ? "Codex"
+                            ? agentLabel
                             : "运行状态"}
                         {m.selected && <small> · {m.selected}</small>}
                       </div>
@@ -663,7 +664,7 @@ function App() {
                   {stream && (
                     <article className="message assistant">
                       <div className="message-label">
-                        Codex <span className="pulse" />
+                        {agentLabel} <span className="pulse" />
                       </div>
                       <div className="markdown">
                         <Markdown>{stream}</Markdown>
@@ -672,7 +673,7 @@ function App() {
                   )}
                   {running && !stream && (
                     <div className="working">
-                      <span className="pulse" /> Codex 正在处理…
+                      <span className="pulse" /> {agentLabel} 正在处理…
                     </div>
                   )}
                   {project?.questions
@@ -735,7 +736,7 @@ function App() {
                 ) : null}
                 {composer}
                 <div className="conversation-foot">
-                  Codex {boot?.codex_version} · 支出由后端预算门禁控制
+                  {boot?.agent_runtime === "native" ? "VideoCopyer Agent" : `Codex ${boot?.codex_version || ""}`} · 支出由后端预算门禁控制
                 </div>
               </section>
               <section
@@ -1477,7 +1478,7 @@ function App() {
               </button>
             </div>
             <div className="modal-body">
-              <p>官方 Codex：{boot?.codex_version}</p>
+              <p>Agent：{boot?.agent_runtime === "native" ? "VideoCopyer 自研 harness" : `Codex ${boot?.codex_version || ""}`}</p>
               <p>规划模型：{boot?.model || "未配置"}</p>
               <p>测试总上限：{money(boot?.budget_micros || 0)}</p>
               <p>控制层：{boot?.database}</p>

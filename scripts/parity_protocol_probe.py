@@ -16,7 +16,7 @@ from local.tool_registry import catalog
 
 async def main():
     pid=projects.create(db.uid(),"offline MCP protocol verification")["id"]
-    runner=bridge.runner(pid)
+    runner=bridge.AgentRunner(pid)
     try:
         await runner.start()
         result=await runner.rpc("mcpServerStatus/list",{"threadId":runner.thread,"serverName":"project_d","detail":"toolsAndAuthOnly"})

@@ -78,7 +78,7 @@ async def main():
         for name, settings in cases:
             overrides = settings
             pid = projects.create(db.uid(), "isolated Codex config replay " + name)["id"]
-            runner = bridge.runner(pid)
+            runner = bridge.AgentRunner(pid)
             calls = []
 
             async def replay(tool, args, call_id):

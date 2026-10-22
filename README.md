@@ -1,6 +1,6 @@
 # VideoCopyer SaaS · 本地单用户原型 v0.1
 
-可本地启动的单用户视频制作应用：网页 Codex 会话、人物/分镜画布、附件、不可变规划、持久任务、预算门禁、真实 Ark 素材制作、MP4 与可编辑剪映 ZIP 成对交付。开发范围和未决项见 [开发状态](docs/DEVELOPMENT.md) 与 [验收记录](docs/ACCEPTANCE.md)。
+可本地启动的单用户视频制作应用：网页 Agent 会话（Codex / 自研 harness 可切换）、人物/分镜画布、附件、不可变规划、持久任务、预算门禁、真实 Ark 素材制作、MP4 与可编辑剪映 ZIP 成对交付。开发范围和未决项见 [开发状态](docs/DEVELOPMENT.md) 与 [验收记录](docs/ACCEPTANCE.md)。
 
 当前源码尚未实现多用户登录、租户隔离与线上计费，不应直接接入公网。审计结果、已修复问题和验证范围见 [代码审计](docs/CODE-AUDIT-2026-10-21.md)。
 
@@ -42,10 +42,12 @@ powershell -ExecutionPolicy Bypass -File scripts/setup.ps1 -Python "C:\Path\To\P
 
 官方 Codex 固定为 **0.163.0**。tag、commit、协议和来源见 [固定基线](docs/BASELINE.md)。浏览器只连接应用 API，App Server 通过后端私有 stdio 运行。未复用个人 Codex 登录，未暴露通用终端或平台密钥。
 
+`config.local.json` 的 `agent_runtime` 可选 `"codex"`（默认）或 `"native"`（自研 harness），修改后重启服务。native 在后端进程中运行异步模型/工具循环，不为每个项目启动 Codex 或 MCP 子进程；后台制作仍由 Worker 执行。两种底座共用工具、计费网关和用户审批；切换时保留原会话，用项目快照建立新会话，不重放未知操作。接口、限制和非付费测试方法见 [自研 harness](docs/NATIVE-HARNESS.md)。
+
 ## 使用
 
 1. 首页输入需求，可附图片、视频、音频或文本，自动进入专属项目。
-2. Codex 使用原 D Skill 和完整 43 个 D 工具创建原生工程；右侧在执行前展示素材、生成任务、图层、音轨、转场与合成依赖。选中节点后在对话中修改。
+2. Agent 使用原 D Skill 和完整 43 个 D 工具创建原生工程；右侧在执行前展示素材、生成任务、图层、音轨、转场与合成依赖。选中节点后在对话中修改。
 3. 查看当前修订的新增、复用、重做范围与增量报价。点击报价卡，或发送“确认报价 ID”（唯一待确认报价也可说“确认制作”）。后台完成会回到 Agent 检查、审片和交付。
 4. 说“全部先停”或点击“全局停止”，会停止当前项目整个流程。修改 B 后可复用有效 A/C；再确认新范围才恢复。说“B 提示词不变，再生成一次”可强制重生成；只改字幕不会新增生成请求。
 5. 成片与剪映工程绑定同一构建，旧版本继续可下载。旧项目仍显示原画布；首次原生编辑通过对话明确选择旧任务，使用 `adopt_legacy_revision` 接管来源。上传视频可以指定帧检查；本地剪映目录和旧 D 工作区通过明确来源授权后导入。
@@ -53,7 +55,7 @@ powershell -ExecutionPolicy Bypass -File scripts/setup.ps1 -Python "C:\Path\To\P
 
 剪映 ZIP 保留支持范围内的视频、图片、字幕和音轨，并排除中间帧。**目标剪映打开→编辑→保存→重开尚待用户实机验收**，结构/重定位通过不能替代实机通过。复杂效果、3D 和语音生成模型等仍按原 D 的实际能力和配置边界处理。
 
-[对齐实施记录](docs/PARITY-IMPLEMENTATION.md) 和 [43 项能力矩阵](docs/PARITY-CAPABILITIES.md) 区分本地通过证据与待验项。完整非付费端到端脚本为 `scripts/parity_web_probe.py`，使用本地模拟 Responses/媒体供应商、真实 Codex/MCP/FFmpeg/Chrome，不验证真实模型规划质量。原供应商配置不会因重启自动刷新；固定报价到期后需运营方更新，不能用过期报价继续生成。
+[对齐实施记录](docs/PARITY-IMPLEMENTATION.md) 和 [43 项能力矩阵](docs/PARITY-CAPABILITIES.md) 区分本地通过证据与待验项。完整非付费端到端脚本为 `scripts/parity_web_probe.py`，使用本地模拟 Responses/媒体供应商、真实 Agent 底座/FFmpeg/Chrome；`VC_TEST_RUNTIME=native` 选择自研底座，默认测 Codex/MCP，不验证真实模型规划质量。原供应商配置不会因重启自动刷新；固定报价到期后需运营方更新，不能用过期报价继续生成。
 
 [两轮用户测试清单](docs/USER-TESTS.md) 可直接用于反馈。`browser-test.mjs` 会创建项目并发起付费素材制作，不是免费 CI；`scripts/verify.ps1` 只做非付费验证。
 
@@ -66,7 +68,7 @@ powershell -ExecutionPolicy Bypass -File scripts/setup.ps1 -Python "C:\Path\To\P
 | 位置 | 内容 |
 |---|---|
 | `web/` | React 双栏工作台和项目路由 |
-| `server/local/` | API、控制存储、Codex Bridge、计量网关、Worker、D 适配、COS |
+| `server/local/` | API、控制存储、Codex Bridge、自研 harness、计量网关、Worker、D 适配、COS |
 | `server/app/workbench_d/commercial/` | 用户指定的 D 独立核心迁入源码 |
 | `scripts/` | 启停/诊断、草稿重定位、浏览器验证 |
 | `tests/` | 数据正确性与上游限定回归 |

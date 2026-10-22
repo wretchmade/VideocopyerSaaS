@@ -344,6 +344,7 @@ def test_late_old_output_does_not_replace_new_attempt(native):
 def test_agent_restart_reconciles_correlated_completed_turn_without_replay(native,monkeypatch):
     import asyncio
     from local import coordinator,bridge
+    monkeypatch.setitem(bridge.CONFIG,'agent_runtime','codex')
     pid,p,e=native
     with db.transaction() as c:
         item=commands.enqueue(c,pid,'recovery-fixture-'+pid,'test',0)
@@ -352,6 +353,9 @@ def test_agent_restart_reconciles_correlated_completed_turn_without_replay(nativ
     calls=[]
     class Runner:
         async def start(self):calls.append('start-no-model')
+        async def read_turn(self,thread_id):
+            await self.start()
+            return await self.rpc('thread/read',{'threadId':thread_id,'includeTurns':True})
         async def rpc(self,method,args):
             calls.append(method)
             return {'thread':{'turns':[{'id':'persisted-turn','status':'completed','items':[

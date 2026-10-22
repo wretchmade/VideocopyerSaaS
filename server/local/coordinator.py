@@ -16,13 +16,17 @@ def recover():
                         {"id": item["id"], "message": "上次 Agent 轮次结果待核对，未自动重发。发送消息可继续读取项目状态。"})
 
 async def reconcile(item):
-    """Read the persisted Codex history; a correlation ID is never a replay license."""
+    """Read persisted runtime history; a correlation ID is never a replay license."""
     pid=item['project'];result=None;error=None
     try:
         if item.get('thread_id'):
-            runner=bridge.runner(pid)
-            await runner.start()
-            result=await runner.rpc('thread/read',{'threadId':item['thread_id'],'includeTurns':True})
+            if item['thread_id'].startswith('native:'):
+                from .native_harness import read_history
+                result=read_history(pid,item['thread_id'])
+            elif bridge.runtime_name()=='codex':
+                result=await bridge.runner(pid).read_turn(item['thread_id'])
+            else:
+                raise ValueError('旧 Codex 轮次保留待核对；当前 native 底座不会启动 Codex 或重放')
     except Exception as exc:error=str(exc)
     turns=(result or {}).get('thread',{}).get('turns',[])
     match=next((t for t in turns if t['id']==item.get('turn') or
@@ -61,7 +65,7 @@ async def tick():
                 continue
         seen.add(pid)
         runner = bridge.RUNNERS.get(pid)
-        if runner and (runner.active or runner.turn_lock.locked()):
+        if runner and runner.busy:
             continue
         e = commands.engine(pid)
         fence = flow.state(e.store)
@@ -91,6 +95,9 @@ async def tick():
                 with db.transaction() as c:
                     current.update(status="needs_attention", error=str(exc))
                     db.put(c, "agent_inbox", item["id"], current, pid, True)
+                    project=db.get(c,'project',pid)
+                    project['status']='failed'
+                    db.put(c,'project',pid,project,pid,True)
                     db.emit(c, pid, "agent/error", {"message": str(exc)})
 
 

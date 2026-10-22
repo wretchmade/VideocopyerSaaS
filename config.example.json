@@ -2,6 +2,11 @@
   "data_dir": ".local/data",
   "database_url": "",
   "port": 8765,
+  "agent_runtime": "codex",
+  "native_harness": {
+    "max_model_requests": 32,
+    "max_context_bytes": 4194304
+  },
   "planning": {
     "base_url": "https://api.openai.com/v1",
     "model": "",

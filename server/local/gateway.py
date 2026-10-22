@@ -1,5 +1,5 @@
 """Server-side Responses boundary: credentials, tool allowlist and global spend admission."""
-import json, math, re, time
+import asyncio, json, math, re, time
 import httpx
 from fastapi import Request, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -24,7 +24,12 @@ def provider_error_code(raw, key):
 async def responses(pid,request:Request):
     token=request.headers.get('authorization','').removeprefix('Bearer ')
     if GATEWAY_TOKENS.get(token)!=pid: raise HTTPException(403,'Private agent boundary')
-    raw=await request.body()
+    return await agent_response(pid,token,await request.body())
+
+
+async def agent_response(pid,token,raw):
+    """Shared metered boundary for HTTP Codex clients and the in-process harness."""
+    if GATEWAY_TOKENS.get(token)!=pid: raise HTTPException(403,'Private agent boundary')
     if len(raw)>8*1024*1024:raise HTTPException(413,'上下文超过本地规划上限')
     body=json.loads(raw);cfg=CONFIG['planning'];key=planning_key()
     if not key:raise HTTPException(409,'规划 API 尚未配置')
@@ -54,13 +59,19 @@ async def responses(pid,request:Request):
     try:
         req=client.build_request('POST',cfg['base_url'].rstrip('/')+'/responses',headers={'Authorization':'Bearer '+key},json=payload)
         response=await client.send(req,stream=True)
-    except Exception:
+    except (Exception,asyncio.CancelledError) as exc:
         await client.aclose()
         with db.transaction() as c:
             row=db.get(c,'usage',rid);row['state']='reconciling';db.put(c,'usage',rid,row,pid,True)
+        if isinstance(exc,asyncio.CancelledError):raise
         raise HTTPException(502,'规划请求连接中断，费用待核对；未自动重试')
     if response.status_code!=200:
-        error=await response.aread();await client.aclose()
+        try:error=await response.aread()
+        except (Exception,asyncio.CancelledError):
+            with db.transaction() as c:
+                row=db.get(c,'usage',rid);row['state']='reconciling';db.put(c,'usage',rid,row,pid,True)
+            raise
+        finally:await client.aclose()
         code=provider_error_code(error,key)
         with db.transaction() as c:
             row=db.get(c,'usage',rid);row.update(state='released' if response.status_code<500 else 'reconciling',error=code);db.put(c,'usage',rid,row,pid,True)
@@ -81,6 +92,8 @@ async def responses(pid,request:Request):
                                 db.emit(c,pid,'usage/completed',row)
                     except ValueError:pass
                 yield (line+'\n').encode()
+        except httpx.HTTPError:
+            raise ValueError('规划响应连接中断，费用待核对；未自动重试') from None
         finally:
             await response.aclose();await client.aclose()
             if not completed:

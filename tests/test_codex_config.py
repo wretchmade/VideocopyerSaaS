@@ -44,6 +44,10 @@ def test_codex_loads_planning_profile_without_fallback(monkeypatch, tmp_path):
 
     async def check():
         pid = projects.create(db.uid(), 'offline profile startup')['id']
+        with db.transaction() as c:
+            project=db.get(c,'project',pid)
+            project.update(thread_id='native:prior-runtime',tool_registry_hash='old-native-tools')
+            db.put(c,'project',pid,project,pid,True)
         runner = bridge.AgentRunner(pid)
         try:
             await runner.start()
@@ -56,6 +60,9 @@ def test_codex_loads_planning_profile_without_fallback(monkeypatch, tmp_path):
                 events = list(c.execute(db.events.select().where(db.events.c.project == pid)).mappings())
             assert not any('fallback metadata' in e['body'] for e in events)
             assert not any(e['kind'] == 'usage/reserved' for e in events)
+            with db.transaction() as c:
+                assert db.get(c,'project',pid)['prior_threads']==['native:prior-runtime']
+                assert db.get(c,'project',pid)['agent_runtime']=='codex'
         finally:
             await runner.close()
     asyncio.run(check())
