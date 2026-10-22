@@ -13,6 +13,57 @@ GATEWAY_TOKENS={}
 def tool(name,description,schema): return {'type':'function','name':name,'description':description,'inputSchema':schema}
 EMPTY={'type':'object','properties':{},'additionalProperties':False}
 TOOLS=dynamic_tools()
+
+DOUBAO_MODEL='doubao-seed-2-1-pro-260915'
+DOUBAO_DEFAULTS={'model_context_window':1048576,'model_auto_compact_token_limit':900000,'tool_output_token_limit':10000}
+
+def model_settings(planning):
+    """Return Codex settings for the configured planning model."""
+    value=dict(planning or {})
+    settings={'tool_output_token_limit':value.get('tool_output_token_limit',10000)}
+    settings.update({k:value[k] for k in ('model_context_window','model_auto_compact_token_limit') if k in value})
+    if value.get('model')==DOUBAO_MODEL:
+        for key,default in DOUBAO_DEFAULTS.items(): settings.setdefault(key,default)
+    for key,n in settings.items():
+        if isinstance(n,bool) or not isinstance(n,int) or n<=0: raise ValueError(f'{key} must be a positive integer')
+    if settings.get('model_auto_compact_token_limit',0)>settings.get('model_context_window',10**18)*9//10:
+        raise ValueError('model_auto_compact_token_limit exceeds 90% of model_context_window')
+    catalog=value.get('model_catalog_json')
+    if catalog and Path(catalog).is_file():
+        models=json.loads(Path(catalog).read_text(encoding='utf8')).get('models',[])
+        row=next((x for x in models if x.get('slug')==value.get('model')),None)
+        if not row: raise ValueError('model is absent from model_catalog_json')
+        if 'model_context_window' in value and value['model_context_window']>row.get('max_context_window',row.get('context_window',value['model_context_window'])):
+            raise ValueError('model_context_window exceeds model catalog limit')
+    return settings
+
+def _catalog_path(home,planning):
+    configured=planning.get('model_catalog_json')
+    return Path(configured).resolve() if configured else home/'doubao-model-catalog.json'
+
+def _write_catalog(path,planning):
+    model=planning.get('model','')
+    if model!=DOUBAO_MODEL:return None
+    path.parent.mkdir(parents=True,exist_ok=True)
+    catalog={'models':[{
+        'slug':model,'display_name':'Doubao Seed 2.1 Pro','description':'Volcengine Ark planning model',
+        'default_reasoning_level':'high','supported_reasoning_levels':[{'effort':x,'description':x} for x in ('low','medium','high','xhigh','max')],
+        'shell_type':'disabled','visibility':'none','supported_in_api':True,'priority':1,
+        'additional_speed_tiers':[],'service_tiers':[],'availability_nux':None,'upgrade':None,
+        'model_messages':{'instructions_template':INSTRUCTIONS},'include_skills_usage_instructions':False,
+        'include_plugin_usage_instructions':False,'include_apps_usage_instructions':False,
+        'default_reasoning_summary':'none','support_verbosity':False,'default_verbosity':None,
+        'apply_patch_tool_type':None,'web_search_tool_type':'text','truncation_policy':{'mode':'tokens','limit':10000},
+        'supports_image_detail_original':True,'context_window':1048576,'max_context_window':1048576,
+        'auto_compact_token_limit':900000,'comp_hash':'videocopyer-doubao-260915',
+        'effective_context_window_percent':95,'experimental_supported_tools':[],
+        'input_modalities':['text','image'],'supports_search_tool':False,'supports_experimental_context':False,
+        'use_responses_lite':False,'supports_reasoning_effort_updates':False,
+        'node_repl_auto_review_required':False,'node_repl_disabled':True,'tool_mode':None,
+        'multi_agent_version':None,'multi_agent_reasoning_effort':None,
+    }]}
+    path.write_text(json.dumps(catalog,ensure_ascii=False),encoding='utf8')
+    return path
 INSTRUCTIONS='''你是 VideoCopyer 完整视频制作 Agent，使用中文完成规划、制作、检查、审片、工作流复用、剪映导出和交付。
 先 get_project 和 d_capabilities。使用 D 原生工具创建和编辑工程，保持任务/图层 ID 稳定；save_plan 仅用于旧分镜元数据。
 旧 Web 项目首次编辑时，用 adopt_legacy_revision 明确选择用户指定的旧 task_id 作为新原生工程来源，保留历史。
@@ -50,8 +101,12 @@ class AgentRunner:
         env={k:v for k,v in os.environ.items() if k.upper() in {'SYSTEMROOT','WINDIR','COMSPEC','TEMP','TMP','PATH','PATHEXT'}}
         env.update(CODEX_HOME=str(home),HOME=str(home),USERPROFILE=str(home),VC_GATEWAY_TOKEN=self.token,
                    VC_PROJECT_ID=self.pid,VC_PORT=str(PORT),PYTHONPATH=str(ROOT/'server'),PYTHONUTF8="1")
+        planning=CONFIG.get('planning',{})
+        settings=model_settings(planning)
+        catalog=_write_catalog(_catalog_path(home,planning),planning)
         config=f'''model_provider = "videocopyer"
 model = "{CONFIG.get('planning',{}).get('model','')}"
+{''.join(f'{k} = {json.dumps(v)}\n' for k,v in settings.items())}{f'model_catalog_json = {json.dumps(str(catalog))}\n' if catalog else ''}
 approval_policy = "never"
 sandbox_mode = "read-only"
 web_search = "disabled"

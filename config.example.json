@@ -8,7 +8,11 @@
     "key_env": "VIDEOCOPYER_PLANNING_KEY",
     "input_cny_per_million": null,
     "output_cny_per_million": null,
-    "max_output_tokens": 4096
+    "max_output_tokens": 4096,
+    "model_context_window": 1048576,
+    "model_auto_compact_token_limit": 900000,
+    "tool_output_token_limit": 10000,
+    "model_catalog_json": ""
   },
   "media_profile": "",
   "cos_env_file": "",
