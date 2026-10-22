@@ -1,5 +1,7 @@
 # 本地 v0.1 开发记录
 
+2026-10-22 harness 更新：`feat/native-harness` 保留 native / Codex 切换，新增共享规划网关 HTTP 连接池及取消、生命周期和真实连接复用检查。完整回归 104 通过、2 项历史证据缺失失败，两种底座的非付费端到端均通过。PydanticAI 的持久提问与上下文处理仅在隔离原型验证，产品运行时和依赖未切换。详见[当前架构图](NATIVE-HARNESS.md)、[对比实测](NATIVE-HARNESS-COMPARISON-2026-10-22.md)与[执行记录](NATIVE-HARNESS-IMPROVEMENT-PLAN-2026-10-22.md)。
+
 实施顺序：基线 → 项目/附件 → Codex Bridge → 双栏工作台 → 持久任务/预算 → 同版交付 → 重定位 → 两轮验收。
 
 | ID | 状态 | 实施与验证 |

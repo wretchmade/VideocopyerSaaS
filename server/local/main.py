@@ -13,27 +13,28 @@ ACTIVE=set()
 
 @asynccontextmanager
 async def lifespan(app):
-    with db.transaction() as c:
-        for p in db.all(c,'project'):
-            if p['status'] in {'running','starting'}:
-                p['status']='interrupted';db.put(c,'project',p['id'],p,p['id'],True)
-        for q in db.all(c,'question'):
-            if q['status']=='pending':q['status']='interrupted';db.put(c,'question',q['id'],q,q['project'],True)
-    coordinator.recover()
-    try:production.setup_media()
-    except Exception:pass
-    inbox_task=asyncio.create_task(coordinator.run())
-    env={**os.environ,'PYTHONPATH':str(ROOT/'server')}
-    log=open(DATA/'worker.log','ab')
-    worker=subprocess.Popen([sys.executable,'-m','local.worker'],cwd=ROOT,env=env,stdout=log,stderr=log,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0));log.close()
-    try:yield
-    finally:
-        inbox_task.cancel()
-        await asyncio.gather(inbox_task,return_exceptions=True)
-        await asyncio.gather(*(r.close() for r in bridge.RUNNERS.values()),return_exceptions=True)
-        worker.terminate()
-        try:worker.wait(timeout=5)
-        except subprocess.TimeoutExpired:worker.kill()
+    async with gateway.connection_pool():
+        with db.transaction() as c:
+            for p in db.all(c,'project'):
+                if p['status'] in {'running','starting'}:
+                    p['status']='interrupted';db.put(c,'project',p['id'],p,p['id'],True)
+            for q in db.all(c,'question'):
+                if q['status']=='pending':q['status']='interrupted';db.put(c,'question',q['id'],q,q['project'],True)
+        coordinator.recover()
+        try:production.setup_media()
+        except Exception:pass
+        env={**os.environ,'PYTHONPATH':str(ROOT/'server')}
+        with open(DATA/'worker.log','ab') as log:
+            worker=subprocess.Popen([sys.executable,'-m','local.worker'],cwd=ROOT,env=env,stdout=log,stderr=log,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+        inbox_task=asyncio.create_task(coordinator.run())
+        try:yield
+        finally:
+            inbox_task.cancel()
+            await asyncio.gather(inbox_task,return_exceptions=True)
+            await asyncio.gather(*(r.close() for r in bridge.RUNNERS.values()),return_exceptions=True)
+            worker.terminate()
+            try:worker.wait(timeout=5)
+            except subprocess.TimeoutExpired:worker.kill()
 
 app=FastAPI(title='VideoCopyer local',lifespan=lifespan,docs_url=None,redoc_url=None)
 

@@ -1,5 +1,6 @@
 """Server-side Responses boundary: credentials, tool allowlist and global spend admission."""
 import asyncio, json, math, re, time
+from contextlib import AsyncExitStack, asynccontextmanager
 import httpx
 from fastapi import Request, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -8,6 +9,26 @@ from .config import CONFIG
 from .credentials import planning_key
 from .bridge import GATEWAY_TOKENS
 from .tool_registry import gateway_contract,restore_tool_calls
+
+_client = None
+
+
+def new_client():
+    return httpx.AsyncClient(timeout=httpx.Timeout(180,connect=20),follow_redirects=False,trust_env=False)
+
+
+@asynccontextmanager
+async def connection_pool():
+    """One application lifecycle/event loop owns the upstream connection pool."""
+    global _client
+    if _client is not None:
+        raise RuntimeError('Planning connection pool already started')
+    async with new_client() as client:
+        _client = client
+        try:
+            yield client
+        finally:
+            _client = None
 
 def provider_error_code(raw, key):
     """Only retain short enum codes; providers may echo credentials in errors."""
@@ -55,12 +76,16 @@ async def agent_response(pid,token,raw):
         db.reserve(c,rid,pid,upper,'planning',{'model':cfg['model'],'bytes':len(raw)})
         row=db.get(c,'usage',rid);row['state']='submitting';db.put(c,'usage',rid,row,pid,True)
         db.emit(c,pid,'usage/reserved',{'id':rid,'reserved_micros':upper})
-    client=httpx.AsyncClient(timeout=httpx.Timeout(180,connect=20),follow_redirects=False,trust_env=False)
+    resources=AsyncExitStack()
+    client=_client or await resources.enter_async_context(new_client())
     try:
         req=client.build_request('POST',cfg['base_url'].rstrip('/')+'/responses',headers={'Authorization':'Bearer '+key},json=payload)
+        # The pool shares sockets, never upstream cookie-based sessions.
+        req.headers.pop('cookie',None)
         response=await client.send(req,stream=True)
+        resources.push_async_callback(response.aclose)
     except (Exception,asyncio.CancelledError) as exc:
-        await client.aclose()
+        await resources.aclose()
         with db.transaction() as c:
             row=db.get(c,'usage',rid);row['state']='reconciling';db.put(c,'usage',rid,row,pid,True)
         if isinstance(exc,asyncio.CancelledError):raise
@@ -71,7 +96,7 @@ async def agent_response(pid,token,raw):
             with db.transaction() as c:
                 row=db.get(c,'usage',rid);row['state']='reconciling';db.put(c,'usage',rid,row,pid,True)
             raise
-        finally:await client.aclose()
+        finally:await resources.aclose()
         code=provider_error_code(error,key)
         with db.transaction() as c:
             row=db.get(c,'usage',rid);row.update(state='released' if response.status_code<500 else 'reconciling',error=code);db.put(c,'usage',rid,row,pid,True)
@@ -95,7 +120,7 @@ async def agent_response(pid,token,raw):
         except httpx.HTTPError:
             raise ValueError('规划响应连接中断，费用待核对；未自动重试') from None
         finally:
-            await response.aclose();await client.aclose()
+            await resources.aclose()
             if not completed:
                 with db.transaction() as c:
                     row=db.get(c,'usage',rid);row['state']='reconciling';db.put(c,'usage',rid,row,pid,True)

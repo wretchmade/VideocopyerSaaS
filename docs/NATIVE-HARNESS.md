@@ -1,5 +1,83 @@
 # 自研 harness 与 Codex 切换
 
+## 当前架构（2026-10-22）
+
+当前分支同时支持 native 与 Codex，默认仍为 Codex。native 的核心仍是自研 `NativeRunner`；本轮落地的是两种底座共用的规划网关连接池。PydanticAI 仅在隔离脚本中验证，未进入产品运行路径。
+
+```mermaid
+flowchart TB
+    UI["浏览器：会话、画布、报价确认"]
+    subgraph APIProcess["FastAPI 后端进程 / asyncio"]
+        API["main.py：API / SSE"]
+        Inbox["coordinator.py：持久收件箱调度"]
+        Select{"bridge.runner(pid)"}
+        Native["NativeRunner：模型 / 工具循环"]
+        Bridge["AgentRunner：Codex stdio 适配"]
+        Tools["AgentTools：参数校验 / 提问 / 工具结果"]
+        Commands["commands / D 核心：项目与制作授权"]
+        Gateway["gateway：项目令牌 / 工具白名单 / 预算预留"]
+        Pool["HTTPX AsyncClient：应用生命周期连接池"]
+    end
+    subgraph CodexProcesses["仅 Codex 模式：项目级子进程"]
+        Codex["Codex App Server 0.163.0"]
+        MCP["project_mcp：默认工具传输"]
+    end
+    Control[("控制数据库：inbox / 会话 / 回执 / 费用 / 事件")]
+    Project[("每项目 D 执行库 / 持久制作任务")]
+    Worker["独立 Worker：制作 / 渲染 / 导出"]
+    Model["规划模型供应商 / Responses"]
+    Media["媒体供应商 / FFmpeg / MP4 与剪映 ZIP"]
+
+    UI <-->|"HTTP / SSE"| API
+    API -->|"持久化消息"| Control
+    Control -->|"待处理 inbox"| Inbox
+    Inbox --> Select
+    Select -->|"native"| Native
+    Select -->|"codex（默认）"| Bridge
+    Bridge <-->|"stdio RPC / 事件"| Codex
+    Native -->|"进程内 agent_response"| Gateway
+    Codex -->|"私有 HTTP /gateway"| Gateway
+    Gateway --> Pool --> Model
+    Gateway -->|"预留 / 结果 / 待核对"| Control
+    Native -->|"完整历史 / 工具回执"| Control
+    Native --> Tools
+    Codex -->|"MCP"| MCP
+    MCP -->|"私有 HTTP /tools"| Tools
+    Bridge -->|"可选 dynamic 工具回调"| Tools
+    Tools --> Commands
+    API -->|"用户确认报价"| Commands
+    Commands --> Project
+    Project <--> Worker
+    Worker --> Media
+    Worker -->|"后台终态入 inbox"| Control
+```
+
+图中箭头表示主要调用和持久化方向，模型流与工具结果沿原调用返回。两种 Agent 路径按配置二选一；Codex 的 MCP 和 dynamic 也是两种工具接入方式。Worker 独立于 Agent 循环，模型提出制作请求仍须通过后端用户授权。
+
+连接池由 `main.lifespan` 在启动 Worker 和协调器前创建，在关闭所有 Agent 后释放。每个模型请求单独设置凭据、不转发上游 Cookie；结束或取消只关闭自己的响应，不关闭共享池。没有 lifespan 的独立调用使用请求级客户端；连接中断或未知结果不自动重试。
+
+| 层 | native | Codex |
+|---|---|---|
+| 模型 / 工具循环 | 后端进程内 `native_harness.py` | 项目级 Codex App Server |
+| 工具接入 | 直接调用 `AgentTools` | MCP 私有 HTTP 或 dynamic 回调 |
+| 会话保存 | 控制库 `native_session` / `native_turn` | 应用独立 Codex 会话目录及 thread ID |
+| 共享边界 | 工具、项目事实、用户授权、规划网关连接池、预算账本、Worker | 同左 |
+
+### 隔离候选：不属于产品架构
+
+```mermaid
+flowchart LR
+    Probe["pydantic_harness_probe.py"] --> SDK["独立虚拟环境：PydanticAI / OpenAI SDK"]
+    SDK <-->|"历史 / 延迟调用 / 恢复门禁"| State[("隔离 SQLite 与历史文件")]
+    SDK -->|"关闭自动重试"| TestGateway["隔离后端的真实计费网关"]
+    TestGateway --> Fixture["本机 Responses 替身"]
+    SDK -->|"get_project"| TestTools["隔离后端的真实工具网关"]
+```
+
+原型验证了跨进程提问恢复、重复恢复拦截及发送前历史处理。产品仍没有自动上下文压缩或跨进程恢复待回答问题；产品依赖未增加 PydanticAI。采用依据、限制和复现命令见[改进执行记录](NATIVE-HARNESS-IMPROVEMENT-PLAN-2026-10-22.md)，原版测试见[对比报告](NATIVE-HARNESS-COMPARISON-2026-10-22.md)。
+
+## 配置切换
+
 在 `config.local.json` 增加以下配置，重启服务后生效。省略 `agent_runtime` 时沿用 Codex。
 
 ```json
@@ -55,6 +133,7 @@ native 在控制数据库的 facts 表新增 `native_session` 和 `native_turn` 
 
 ```powershell
 .venv/Scripts/python.exe -m pytest tests/test_native_harness.py tests/test_codex_config.py tests/test_security.py -q
+.venv/Scripts/python.exe scripts/gateway_pool_probe.py
 powershell -ExecutionPolicy Bypass -File scripts/verify.ps1
 
 $env:VC_TEST_RUNTIME='native'
@@ -67,6 +146,8 @@ Remove-Item Env:VC_TEST_RUNTIME
 端到端脚本创建隔离的 `.local/parity-web-*` 数据目录，模型与生成供应商均为 loopback 替身。覆盖报价确认、重启不重复提交、停止、只重做 B 并复用 A/C、再次修改 B/C、提示词不变强制重做、字幕无需重新生成、图片审片、MP4 与剪映 ZIP 成对交付。结果保存在该次目录的 `summary.json`、`model-requests.json` 和数据库中；截图仍由原浏览器脚本写入本机 `docs/evidence/parity/`。
 
 2026-10-22 本机两种底座的端到端验收均通过。native 的规划后进程采样中，Codex/MCP 子进程数为 0；该采样不包含后台制作进程的数量，也不是并发容量测试。
+
+连接池改动后完整 Python 回归为 104 通过、2 项既有基线缺失失败；安全与 native 专项 30 通过。真实 HTTP/1.1 探针中，每组 11 次请求由 11 个 TCP 连接降至 1 个，native / Codex 的非付费端到端均通过。合成历史原型请求体减少 88.13%，不代表产品已有压缩能力或真实模型质量已验证。
 
 完整 `verify.ps1` 仍有两项旧测试因历史资料缺失而失败：`test_catalog_contracts` 缺少 `docs/evidence/parity/installed-tools.json`，`test_baseline_hashes_and_demo_rejected` 缺少 `docs/evidence/template-baseline-20261020/` 的基线文件。没有重建或伪造旧基线；其余测试、画布图测试及前端构建已单独验证。
 

@@ -52,6 +52,8 @@ Key 只存入 Windows 凭据库，规划模型与 Seedance 共用；向导生成
 
 `config.local.json` 的 `agent_runtime` 可选 `"codex"`（默认）或 `"native"`（自研 harness），修改后重启服务。native 在后端进程中运行异步模型/工具循环，不为每个项目启动 Codex 或 MCP 子进程；后台制作仍由 Worker 执行。两种底座共用工具、计费网关和用户审批；切换时保留原会话，用项目快照建立新会话，不重放未知操作。接口、限制和非付费测试方法见 [自研 harness](docs/NATIVE-HARNESS.md)。
 
+当前[架构图与实现边界](docs/NATIVE-HARNESS.md#当前架构2026-10-22)、[原版对比实测](docs/NATIVE-HARNESS-COMPARISON-2026-10-22.md)及[改进执行记录](docs/NATIVE-HARNESS-IMPROVEMENT-PLAN-2026-10-22.md)已更新：两种底座共用应用生命周期 HTTP 连接池；PydanticAI 暂为隔离实验，未替换产品的自研循环。
+
 ## 使用
 
 1. 首页输入需求，可附图片、视频、音频或文本，自动进入专属项目。
